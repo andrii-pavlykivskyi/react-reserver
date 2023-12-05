@@ -1,0 +1,19 @@
+.peg-drop-place {
+  position: relative;
+}
+.peg-drop-place::after {
+  content: '';
+  inset: 0px;
+  background-color: #0e6ba830;
+  z-index: 20000;
+  position: absolute;
+}
+
+.peg-drop-place-first::after {
+  border-bottom-left-radius: 8px;
+  border-top-left-radius: 8px;
+}
+.peg-drop-place-last::after {
+  border-bottom-right-radius: 8px;
+  border-top-right-radius: 8px;
+}

@@ -1,4 +1,4 @@
-import React from 'react'
+import React from 'react';
 
 export default function Peg(props: React.ComponentProps<'div'>) {
   const style = {
@@ -10,11 +10,11 @@ export default function Peg(props: React.ComponentProps<'div'>) {
     display: 'flex',
     fontSize: '10px',
     background: 'green'
-  }
+  };
 
   return (
     <div className={props.className} style={Object.assign(style, props.style)}>
       {props.children}
     </div>
-  )
+  );
 }

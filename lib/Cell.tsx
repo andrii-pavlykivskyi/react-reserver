@@ -1,32 +1,34 @@
-import { CellCoordinates, Dimension } from './types'
+import { CellCoordinates, Dimension } from './types';
 
 type EventParam = {
-  cell: Partial<CellCoordinates>
-  dimension: Dimension
-}
+  cell: CellCoordinates;
+  dimension: Dimension;
+};
 
-export type CellEventHandler = (p: EventParam, e: React.MouseEvent) => void
+export type CellEventHandler = (p: EventParam, e: React.MouseEvent<Element>) => void;
+
+export type CellPointerEventHandler = (p: EventParam, e: React.PointerEvent<Element>) => void;
 
 export type CellProps = {
-  dimension: Dimension
-  className?: string
-  column?: number
-  row?: number
-  style?: React.CSSProperties
-  onDragOver?: CellEventHandler
-  onMouseOver?: CellEventHandler
-  onMouseUp?: CellEventHandler
-  onDrop?: CellEventHandler
-  onMouseEnter?: CellEventHandler
-  onPointerEnter?: CellEventHandler
-  onPointerLeave?: CellEventHandler
-  onPointerMove?: CellEventHandler
-  onPointerOut?: CellEventHandler
-  onPointerOver?: CellEventHandler
-  onMouseDown?: CellEventHandler
-  onPointerDown?: CellEventHandler
-  onPointerUp?: CellEventHandler
-} & React.PropsWithChildren
+  dimension: Dimension;
+  className?: string;
+  column: number;
+  row: number;
+  style?: React.CSSProperties;
+  onDragOver?: CellEventHandler;
+  onMouseOver?: CellEventHandler;
+  onMouseUp?: CellEventHandler;
+  onDrop?: CellEventHandler;
+  onMouseEnter?: CellEventHandler;
+  onPointerEnter?: CellPointerEventHandler;
+  onPointerLeave?: CellPointerEventHandler;
+  onPointerMove?: CellPointerEventHandler;
+  onPointerOut?: CellPointerEventHandler;
+  onPointerOver?: CellPointerEventHandler;
+  onMouseDown?: CellEventHandler;
+  onPointerDown?: CellPointerEventHandler;
+  onPointerUp?: CellPointerEventHandler;
+} & React.PropsWithChildren;
 
 export default function Cell({
   dimension,
@@ -51,13 +53,13 @@ export default function Cell({
 }: CellProps) {
   return (
     <div
-      role='gridcell'
+      role="gridcell"
       aria-colindex={column}
       onDragStart={(e) => {
-        e.preventDefault()
+        e.preventDefault();
       }}
       onDragOver={(e) => {
-        e.preventDefault()
+        e.preventDefault();
         onDragOver &&
           onDragOver(
             {
@@ -65,7 +67,7 @@ export default function Cell({
               cell: { row, column }
             },
             e
-          )
+          );
       }}
       className={className}
       onMouseOver={(e) => {
@@ -76,7 +78,7 @@ export default function Cell({
               cell: { row: row, column: column }
             },
             e
-          )
+          );
       }}
       onMouseEnter={(e) => {
         onMouseEnter &&
@@ -86,7 +88,7 @@ export default function Cell({
               cell: { row: row, column: column }
             },
             e
-          )
+          );
       }}
       onPointerEnter={(e) => {
         onPointerEnter &&
@@ -96,7 +98,7 @@ export default function Cell({
               cell: { row: row, column: column }
             },
             e
-          )
+          );
       }}
       onPointerLeave={(e) => {
         onPointerLeave &&
@@ -106,7 +108,7 @@ export default function Cell({
               cell: { row: row, column: column }
             },
             e
-          )
+          );
       }}
       onPointerMove={(e) => {
         onPointerMove &&
@@ -116,7 +118,7 @@ export default function Cell({
               cell: { row: row, column: column }
             },
             e
-          )
+          );
       }}
       onPointerOut={(e) => {
         onPointerOut &&
@@ -126,7 +128,7 @@ export default function Cell({
               cell: { row: row, column: column }
             },
             e
-          )
+          );
       }}
       onPointerOver={(e) => {
         onPointerOver &&
@@ -136,7 +138,7 @@ export default function Cell({
               cell: { row: row, column: column }
             },
             e
-          )
+          );
       }}
       onMouseDown={(e) => {
         onMouseDown &&
@@ -146,7 +148,7 @@ export default function Cell({
               cell: { row: row, column: column }
             },
             e
-          )
+          );
       }}
       onPointerDown={(e) => {
         onPointerDown &&
@@ -156,7 +158,7 @@ export default function Cell({
               cell: { row: row, column: column }
             },
             e
-          )
+          );
       }}
       onPointerUp={(e) => {
         onPointerUp &&
@@ -166,7 +168,7 @@ export default function Cell({
               cell: { row: row, column: column }
             },
             e
-          )
+          );
       }}
       onMouseUp={(e) => {
         onMouseUp &&
@@ -176,7 +178,7 @@ export default function Cell({
               cell: { row: row, column: column }
             },
             e
-          )
+          );
       }}
       onDrop={(e) => {
         onDrop &&
@@ -186,7 +188,7 @@ export default function Cell({
               cell: { row: row, column: column }
             },
             e
-          )
+          );
       }}
       style={{
         overflow: 'hidden',
@@ -197,13 +199,5 @@ export default function Cell({
     >
       {children}
     </div>
-  )
-}
-
-Cell.defaultProps = {
-  onMouseEnter: () => {},
-  onMouseDown: () => {},
-  onMouseUp: () => {},
-  onMouseOver: () => {},
-  onDrop: () => {}
+  );
 }

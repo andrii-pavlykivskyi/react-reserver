@@ -1,62 +1,47 @@
-import { ReactNode } from "react"
-import { Dimension } from "../types"
-import { CellEventHandler } from "../Cell"
+import { ReactNode } from 'react';
+import { Dimension } from '../types';
+import { CellEventHandler, CellPointerEventHandler } from '../Cell';
+import { HeadProps } from '../Head';
 
-export type ReserverContent = Record<`r${number}c${number}`, ReactNode>
+export type ReserverContent = Record<`r${number}c${number}`, ReactNode>;
 
-export type GetReserverContent = (
-  columnCount: number,
-  rowCount: number
-) => ReserverContent
+export type GetReserverContent = (columnCount: number, rowCount: number) => ReserverContent;
 
-type Title = ((count: number) => React.ReactNode) | ReactNode
+type Titles = ReactNode[];
 
 export type ChildrenProps = {
-  rowCount: number
-  columnCount: number
-  rowTitleWidth: number
-  dimension: Dimension
-  columnTitleHeight: number
-}
+  rowCount: number;
+  columnCount: number;
+  rowTitleWidth: number;
+  dimension: Dimension;
+  columnTitleHeight: number;
+};
 
+export type ReserverProps = Omit<React.ComponentProps<'div'>, 'content' | 'children'> & {
+  content?: GetReserverContent;
+  dimension: Dimension;
+  rowTitleWidth: number;
+  rowTitles: Titles;
+  columnTitles: Titles;
+  columnTitleHeight: number;
+  columnTitleClassName?: string;
+  cantonClassName?: string;
+  rowTitleClassName?: string;
+  cellClassName?: string;
 
-// dimension = { height: 20, width: 20 },
-// height = 500,
-// width = 500,
+  mouseDownCell?: CellEventHandler;
+  mouseEnterCell?: CellEventHandler;
+  mouseUpCell?: CellEventHandler;
+  mouseDropCell?: CellEventHandler;
+  mouseDragOverCell?: CellEventHandler;
+  pointerDownCell?: CellPointerEventHandler;
+  pointerMoveCell?: CellPointerEventHandler;
+  pointerEnterCell?: CellPointerEventHandler;
+  pointerLeaveCell?: CellPointerEventHandler;
+  pointerUpCell?: CellPointerEventHandler;
+  pointerOverCell?: CellPointerEventHandler;
 
-// columnTitles: getColumnTitles = [],
-// rowTitles: getRowTitles = [],
-// content: getContent = (() => ({})) as GetReserverContent,
-// rowTitleWidth = 0,
-// columnTitleHeight = 0,
-// dir = 'ltr',
+  children: (props: ChildrenProps) => ReactNode;
 
-
-export type ReserverProps = Omit<React.ComponentProps<'div'>, 'content'> & {
-  content?: GetReserverContent
-  dimension: Dimension
-  height: number
-  width: number
-  rowTitleWidth: number
-  rowTitles: Title[]
-  columnTitles: Title[]
-  columnTitleHeight: number
-  columnTitleClassName?: string
-  cantonClassName?: string
-  rowTitleClassName?: string
-  cellClassName?: string
-
-  mouseDownCell: CellEventHandler
-  mouseEnterCell: CellEventHandler
-  mouseUpCell: CellEventHandler
-  mouseDropCell: CellEventHandler
-  mouseDragOverCell: CellEventHandler
-  pointerDownCell: CellEventHandler
-  pointerMoveCell: CellEventHandler
-  pointerEnterCell: CellEventHandler
-  pointerLeaveCell: CellEventHandler
-  pointerUpCell: CellEventHandler
-  pointerOverCell: CellEventHandler
-
-  children: (props: ChildrenProps) => ReactNode
-}
+  HeadProps?: Partial<HeadProps>;
+};

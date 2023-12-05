@@ -1,73 +1,41 @@
-import React, { ReactNode, ComponentProps } from 'react'
-import { Dimension } from './types'
-import { ReserverContent } from './Reserver/types'
+import React, { ReactNode, ComponentProps, ReactElement } from 'react';
+import { Dimension } from './types';
+
+type Content = ReactNode & { props: { style: React.CSSProperties } };
 
 function getContent(
   index: number,
   length: number,
-  content: ReserverContent,
   firstContent: ReactNode,
   lastContent: ReactNode
-): ReactNode {
+): Content {
   if (index === 0) {
-    return firstContent || content[index] || <div />
+    return (firstContent || <div />) as Content;
   } else if (length - 1 === index) {
-    return lastContent || content[length - 1] || <div />
+    return (lastContent || <div />) as Content;
   }
-  return content[index] || <div />
+  return <div />;
 }
 
-type BarProps = ComponentProps<'div'> & {
-  length: number
-  dimension: Dimension
-  firstContent: ReactNode
-  lastContent: ReactNode
-  content: ((length: number) => ReserverContent) | ReserverContent
-}
+export type BarProps = Omit<ComponentProps<'div'>, 'content'> & {
+  length: number;
+  dimension: Dimension;
+  firstContent: ReactNode;
+  lastContent: ReactNode;
+};
 
-export default function Bar(props: BarProps) {
-  const content =
-    typeof props.content === 'function'
-      ? props.content(props.length)
-      : props.content
+export default function Bar({
+  length = 1,
+  dimension,
+  firstContent = null,
+  lastContent = null,
+  ...props
+}: BarProps) {
   return (
     <div
+      {...props}
       id={props.id}
-      role='listitem'
-      onDragStart={(e) => {
-        if (props.onDragStart) props.onDragStart(e, props)
-      }}
-      onDragEnd={(e) => {
-        props.onDragEnd(e, props)
-      }}
-      onClick={(e) => {
-        props.onClick(e, props)
-      }}
-      onMouseOver={(e) => {
-        props.onMouseOver(e, props)
-      }}
-      onContextMenu={(e) => {
-        props.onContextMenu(e, props)
-      }}
-      onMouseEnter={(e) => {
-        props.onMouseEnter(e, props)
-      }}
-      onMouseLeave={(e) => {
-        props.onMouseLeave(e, props)
-      }}
-      onMouseMove={(e) => {
-        props.onMouseMove(e, props)
-      }}
-      onMouseDown={(e) => {
-        props.onMouseDown(e, props)
-      }}
-      onMouseUp={(e) => {
-        props.onMouseUp(e, props)
-      }}
-      onPointerDown={(e) => {
-        typeof props.onPointerDown === 'function' &&
-          props.onPointerDown(e, props)
-      }}
+      role="listitem"
       draggable={props.draggable}
       style={{
         ...props.style,
@@ -75,56 +43,34 @@ export default function Bar(props: BarProps) {
         background: props.style?.background || '#0E6BA8',
         display: props.style?.display || 'flex',
         position: props.style?.position || 'absolute',
-        zIndex: props.style?.zIndex || '100'
+        zIndex: props.style?.zIndex || '100',
+        cursor: 'move'
       }}
       className={props.className}
     >
-      {[...Array(props.length)].map((notUsed, i) => {
-        const processedContent = getContent(
-          i,
-          props.length,
-          content,
-          props.firstContent,
-          props.lastContent
-        )
+      {[...Array(length)].map((_, i) => {
+        const processedContent = getContent(i, length, firstContent, lastContent);
 
         const style = Object.assign(
           {
-            width: props.dimension.width,
-            height: props.dimension.height,
+            width: dimension.width,
+            height: dimension.height,
             pointerEvents: props.style?.pointerEvents || 'none'
           },
-          ((processedContent as ReactNode)?.props && processedContent?.props?.style) || {}
-        )
+          (processedContent?.props && processedContent?.props?.style) || {}
+        );
 
         return (
           <React.Fragment key={i}>
             {React.cloneElement(
-              processedContent,
+              processedContent as ReactElement,
               { ...processedContent.props, style },
               processedContent.props.children
             )}
           </React.Fragment>
-        )
+        );
       })}
       {props.children}
     </div>
-  )
-}
-
-Bar.defaultProps = {
-  style: {},
-  dimension: { width: 20, height: 20 },
-  onClick: () => {},
-  onMouseOver: () => {},
-  onDragStart: () => {},
-  onDragEnd: () => {},
-  onContextMenu: () => {},
-  onMouseDown: () => {},
-  onMouseUp: () => {},
-  onMouseEnter: () => {},
-  onMouseLeave: () => {},
-  onMouseMove: () => {},
-  length: 1,
-  content: {}
+  );
 }

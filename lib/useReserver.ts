@@ -1,33 +1,33 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useReducer } from 'react'
-import actionTypes from './actionTypes'
-import { ReserverReducer } from './reserverReducer'
+import { useReducer, useCallback } from 'react';
+import actionTypes from './actionTypes';
+import { ReserverReducer } from './reserverReducer';
 
 function useReserver(reducer: ReserverReducer, initialState: any) {
   const [{ bars, isEditing }, dispatch] = useReducer(reducer, {
     bars: initialState,
     isEditing: false
-  })
+  });
 
-  const addBar = (props: any) => {
-    return dispatch({ payload: props, type: actionTypes.add })
-  }
+  const addBar = useCallback((props: any) => {
+    return dispatch({ payload: props, type: actionTypes.add });
+  }, []);
 
-  const editBar = (props: any) => {
-    return dispatch({ payload: props, type: actionTypes.edit })
-  }
+  const editBar = useCallback((props: any) => {
+    return dispatch({ payload: props, type: actionTypes.edit });
+  }, []);
 
-  const deleteBar = (props: any) => {
-    return dispatch({ payload: props, type: actionTypes.delete })
-  }
+  const deleteBar = useCallback((props: any) => {
+    return dispatch({ payload: props, type: actionTypes.delete });
+  }, []);
 
-  const setBars = (props: any) => {
-    return dispatch({ payload: props, type: actionTypes.setBars })
-  }
+  const setBars = useCallback((props: any) => {
+    return dispatch({ payload: props, type: actionTypes.setBars });
+  }, []);
 
-  const setIsEditing = (props: any) => {
-    return dispatch({ payload: props, type: actionTypes.setIsEditing })
-  }
+  const setIsEditing = useCallback((props: any) => {
+    return dispatch({ payload: props, type: actionTypes.setIsEditing });
+  }, []);
 
   return {
     isEditing,
@@ -37,6 +37,6 @@ function useReserver(reducer: ReserverReducer, initialState: any) {
     editBar,
     deleteBar,
     setBars
-  }
+  };
 }
-export default useReserver
+export default useReserver;

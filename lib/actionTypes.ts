@@ -6,4 +6,4 @@ const actionTypes = {
   setIsEditing: 'SET_IS_EDITING'
 } as const;
 
-export default actionTypes
+export default actionTypes;

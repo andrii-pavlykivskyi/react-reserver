@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react';
 import Reserver, {
   Bar,
   useReserver,
@@ -8,60 +8,54 @@ import Reserver, {
   Peg,
   Tag,
   evaluatePosition
-} from '../lib/main'
+} from '../lib/main';
+import './index.css';
+import clsx from 'clsx';
 
-import moment from 'moment'
-import Modali, { useModali } from 'modali'
-import {
-  isObjectEmpty,
-  resolveRow,
-  resolveDateDiff,
-  resolveDate,
-  dateRange
-} from './helpers'
-import { hotelReservations } from './testdata'
+import moment from 'moment';
+import { isObjectEmpty, resolveDateDiff, dateRange } from './helpers';
+import { hotelReservations } from './testdata';
+import { BarStick, TBar } from '../lib/types';
+import { StateBar } from '../lib/reserverReducer';
 
 function useStyle() {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return { error: 'no window or document' }
-  }
-  const el = useRef(document.createElement('style'))
+  const el = useRef(document.createElement('style'));
 
   useEffect(() => {
-    el.current.type = 'text/css'
+    el.current.type = 'text/css';
 
     // Add it to the head of the document
 
-    const head = document.querySelector('head')
-    head.appendChild(el.current)
+    const head = document.querySelector('head');
+    head?.appendChild(el.current);
 
     // At some future point we can totally redefine the entire content of the style element
-  }, [])
+  }, []);
 
   const setStyle = (newStyles) => {
-    el.current.innerHTML = newStyles
-  }
+    el.current.innerHTML = newStyles;
+  };
 
-  return setStyle
+  return setStyle;
 }
 
-function Month(props) {
-  return (
-    <div
-      style={{
-        width: props.width,
-        display: 'inline-block',
-        color: '#adb3b8',
-        paddingLeft: '10px',
-        borderLeft: '1px solid #d2d2d2'
-      }}
-    >
-      {props.children}{' '}
-    </div>
-  )
-}
+type DraggingElement =
+  | (TBar & {
+      draggingLeft?: number;
+      draggingTop?: number;
+      selectedCell?: number;
+      moving?: boolean;
+      stick?: BarStick;
+    })
+  | null;
 
-function generateColumnTitles(props) {
+export type TitleRange = Record<number, boolean>;
+
+function generateColumnTitles(props: {
+  date: string;
+  columnCount: number;
+  titleRange: TitleRange;
+}) {
   return dateRange(props.date, props.columnCount, 'days').map((val, index) => {
     return (
       <div
@@ -80,11 +74,11 @@ function generateColumnTitles(props) {
       >
         <div>{val}</div>
       </div>
-    )
-  })
+    );
+  });
 }
 
-function generateRowTitles(row) {
+function generateRowTitles(dropRowIndex: number | null) {
   return [
     { name: 'Single', number: 1, background: '#D6C7A1' },
     { name: 'Single', number: 2, background: '#D6C7A1' },
@@ -110,224 +104,78 @@ function generateRowTitles(row) {
             padding: '3px',
             display: 'flex',
             alignContent: 'center',
-            background: row === index ? '#1ca3f9' : room.background
+            background: dropRowIndex === index ? '#1ca3f9' : room.background
           }}
         >
-          <div style={{ fontSize: '13px', marginRight: '10px' }}>
-            {room.number}
-          </div>
+          <div style={{ fontSize: '13px', marginRight: '10px' }}>{room.number}</div>
           <div>{room.name}</div>
         </div>
       </div>
-    )
-  })
-}
-
-function useGenerateMonths(count, startDate, width, rowTitleWidth = 0) {
-  const [divs, setDivs] = useState([])
-
-  let currentMonth = startDate.format('MMMM')
-  let currentWidth = 0
-  useEffect(() => {
-    const tDivs = []
-    ;[...Array(count)].forEach((n, i) => {
-      const evaluatedMonth = startDate.clone().add(i, 'days').format('MMMM')
-
-      if (currentMonth !== evaluatedMonth && currentWidth > 0) {
-        tDivs.push(
-          <Month key={currentMonth} width={currentWidth}>
-            {currentMonth}
-          </Month>
-        )
-        currentWidth = 0
-        currentMonth = evaluatedMonth
-      }
-
-      currentWidth += width
-    })
-
-    if (currentWidth > 0) {
-      tDivs.push(
-        <Month key={currentMonth} width={currentWidth}>
-          {currentMonth}
-        </Month>
-      )
-    }
-
-    setDivs(tDivs)
-  }, [count, startDate.format('MMMM'), width])
-
-  return divs
-}
-
-function calculatePointerLocation(
-  column,
-  columnWidth,
-  rowTitleWidth,
-  columnTitleHeight
-) {
-  return {
-    x: column * columnWidth + columnWidth / 2 + rowTitleWidth,
-    y: columnTitleHeight
-  }
-}
-
-function calculateCenterPoint(startLine, endLine) {
-  return {
-    x: (startLine.x - endLine.x) / 2 + endLine.x,
-    y: (endLine.y - startLine.y) / 2 + startLine.y
-  }
+    );
+  });
 }
 
 function calculateLinePoint(
-  column,
-  columnWidth,
-  columnTitleHeight,
-  row,
-  rowHeight,
-  rowTitleWidth
+  column: number,
+  columnWidth: number,
+  columnTitleHeight: number,
+  row: number,
+  rowHeight: number,
+  rowTitleWidth: number
 ) {
   return {
     x: column * columnWidth + rowTitleWidth,
     y: (row + 0.5) * rowHeight + columnTitleHeight
-  }
+  };
 }
 
-const barTemplate = {
-  style: '',
-  column: '',
-  dimension: '',
-  end: '',
-  id: '',
-  img: '',
-  length: '',
-  row: '',
-  start: '',
-  text: '',
-  to: '',
-  from: '',
-  type: '',
-  editing: '',
-  className: '',
-  selectedCell: '',
-  moving: '',
-  draggingLeft: '',
-  draggingTop: '',
-  content: '',
-  lastContent: '',
-  firstContent: ''
-}
-function clearProps(props, template) {
-  const finalObject = {}
-  Object.keys(template).forEach((key) => {
-    if (props[key] !== undefined) {
-      finalObject[key] = props[key]
-    }
-  })
+const cellDimension = { width: 40, height: 30 };
+const startDate = moment.utc(moment.now());
 
-  return finalObject
-}
+export default function HotelReservation() {
+  const { bars, isEditing, setIsEditing, addBar, setBars, editBar } = useReserver(
+    reserverReducer,
+    []
+  );
 
-const cancelReservation = (deleteBar, setNewReservation, newReservation) => {
-  deleteBar(newReservation)
-  setNewReservation({})
-}
+  const windowRef = useRef<HTMLDivElement>(null);
+  const columnTitleHeight = 30;
+  const rowTitleWidth = 130;
 
-const cellDimesions = { width: 30, height: 30 }
-export default function HotelReservation(props) {
-  const { bars, isEditing, setIsEditing, addBar, deleteBar, setBars, editBar } =
-    useReserver(reserverReducer, [])
-
-  // const [addReservationModal, toggleAddReservation] = useModali({
-  //   animated: true,
-  //   title: 'Add Name to Reservation',
-  //   message: 'Deleting this user will be permanent.',
-  //   onEscapeKeyDown: () =>
-  //     cancelReservation(deleteBar, setNewReservation, newReservation),
-  //   onOverlayClicked: () =>
-  //     cancelReservation(deleteBar, setNewReservation, newReservation),
-  //   buttons: [
-  //     <Modali.Button
-  //       label='Cancel'
-  //       isStyleCancel
-  //       onClick={() => {
-  //         toggleAddReservation()
-  //         cancelReservation(deleteBar, setNewReservation, newReservation)
-  //       }}
-  //     />,
-  //     <Modali.Button
-  //       label='Add'
-  //       isStyleDefault
-  //       onClick={() => {
-  //         console.log(newReservation)
-
-  //         editBar({
-  //           ...newReservation,
-  //           name: guestName,
-  //           new: false,
-  //           editing: false
-  //         })
-  //         toggleAddReservation()
-  //         setNewReservation({})
-  //       }}
-  //     />
-  //   ]
-  // })
-  const windowRef = useRef<HTMLDivElement>()
-  const startDate = moment('26/04/2019', 'DD/MM/YYYY')
-  const columnTitleHeight = 30
-  const rowTitleWidth = 130
-
-  const [daysTotal, setDaysTotal] = useState(0)
-  const [projectDimensions, setProjectDimensions] = useState({
-    width: 0,
-    height: 0
-  })
+  const daysTotal = 30;
   // const [guestName, setGuestName] = useState('')
-  const [newReservation, setNewReservation] = useState({})
+  const [newReservation, setNewReservation] = useState<StateBar | null>(null);
 
-  const [isDragging, setIsDragging] = useState(false)
+  const [isDragging, setIsDragging] = useState(false);
 
-  const [draggingElement, setDraggingElement] = useState({})
+  const [draggingElement, setDraggingElement] = useState<DraggingElement>(null);
 
-  const [titleRange, setTitleRange] = useState({})
-  const [hoverRow, setHoverRow] = useState({})
+  const [titleRange, setTitleRange] = useState<TitleRange>({});
+  const [hoverRow, setHoverRow] = useState<number | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const reserverRef = useRef<any>(null)
+  const reserverRef = useRef<any>(null);
 
-  const monthNames = useGenerateMonths(
-    daysTotal,
-    startDate,
-    cellDimesions.width,
-    rowTitleWidth
-  )
-
-  const setStyle = useStyle()
-
-  useEffect(() => {
-    const windowSize = windowRef.current?.getBoundingClientRect()
-    const { width, height } = reserverRef.current?.getBoundingClientRect()
-
-    setProjectDimensions({ width, height, winWidth: windowSize.width })
-  }, [reserverRef.current])
+  const setStyle = useStyle();
 
   useEffect(() => {
     const nBars = hotelReservations.map((bar) => {
-      bar.dimension = cellDimesions
+      bar.dimension = cellDimension;
       if (bar.start && bar.end) {
-        bar.length = resolveDateDiff(bar.start, bar.end)
+        bar.length = resolveDateDiff(bar.start, bar.end) + 1;
       }
 
       if (bar.start && bar.end) {
-        bar.column = resolveDateDiff(startDate, bar.start)
+        bar.column = resolveDateDiff(startDate, bar.start) + 1;
       }
 
-      return bar
-    })
+      return bar;
+    });
 
-    setBars(nBars)
-  }, [])
+    setBars(nBars);
+  }, [setBars]);
+
+  const reserverWidth = windowRef.current?.getBoundingClientRect().width || 0;
 
   return (
     <>
@@ -336,352 +184,351 @@ export default function HotelReservation(props) {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          touchAction: 'none'
+          touchAction: 'none',
+          userSelect: 'none'
         }}
       >
-        <div
-          style={{
-            width: projectDimensions.width - rowTitleWidth,
-            marginLeft: rowTitleWidth,
-            marginBottom: '5px'
-          }}
-        >
-          {monthNames}
-        </div>
-
         <div
           ref={windowRef}
           style={{
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            minWidth: 500
           }}
         >
-          <Reserver
-            ref={reserverRef}
-            width={projectDimensions.winWidth}
-            columnTitleHeight={columnTitleHeight}
-            dimension={cellDimesions}
-            rowTitleWidth={rowTitleWidth}
-            rowTitles={{
-              func: () => {
-                return generateRowTitles(hoverRow)
-              },
-              hoverRow
-            }}
-            columnTitles={{
-              func: (columnCount) => {
-                setDaysTotal(columnCount)
-                return generateColumnTitles({
-                  date: startDate,
-                  columnCount,
-                  titleRange,
-                  cellDimesions,
-                  rowTitleWidth,
-                  columnTitleHeight
-                })
-              },
-              titleRange
-            }}
-            content={(columnCount, rowCount) => {
-              const content = {}
+          {reserverWidth ? (
+            <Reserver
+              ref={reserverRef}
+              columnTitleHeight={columnTitleHeight}
+              dimension={cellDimension}
+              rowTitleWidth={rowTitleWidth}
+              rowTitles={generateRowTitles(hoverRow)}
+              columnTitles={generateColumnTitles({
+                date: startDate.toISOString(),
+                columnCount: daysTotal,
+                titleRange
+              })}
+              content={(columnCount, rowCount) => {
+                const content = {};
 
-              ;[...Array(rowCount)].forEach((unused, r) => {
-                ;[...Array(columnCount)].forEach((unused, c) => {
-                  content[`r${r}c${c}`] = (
-                    <Peg
-                      style={{ background: c % 2 == 0 ? '#EDF1F2' : '#F6F8F9' }}
-                    />
-                  )
-                })
-              })
+                Array(rowCount)
+                  .fill(null)
+                  .forEach((_, r) => {
+                    Array(columnCount)
+                      .fill(null)
+                      .forEach((_, c) => {
+                        const isDropPlace = titleRange[c] && hoverRow === r;
 
-              return content
-            }}
-            pointerDownCell={(props, e) => {
-              console.log('pointer down cell')
+                        const dropColumnsIndexes = Object.entries(titleRange)
+                          .filter(([, value]) => !!value)
+                          .sort(([a], [b]) => +a - +b)
+                          .map(([v]) => +v);
+                        const isFirstDropPlace = isDropPlace && dropColumnsIndexes.at(0) === c;
+                        const isLastDropPlace = isDropPlace && dropColumnsIndexes.at(-1) === c;
 
-              e.target.releasePointerCapture(e.pointerId)
-              const newbar = createBar(props.dimension, props.cell, {
-                new: true
-              })
+                        content[`r${r}c${c}`] = (
+                          <Peg
+                            className={clsx({
+                              'peg-drop-place': isDropPlace,
+                              'peg-drop-place-first': isFirstDropPlace,
+                              'peg-drop-place-last': isLastDropPlace
+                            })}
+                            style={{
+                              background: c % 2 == 0 ? '#EDF1F2' : '#F6F8F9'
+                            }}
+                          />
+                        );
+                      });
+                  });
 
-              const selectionRange = {}
+                return content;
+              }}
+              pointerDownCell={(props, e) => {
+                (e.target as Element).releasePointerCapture(e.pointerId);
+                const newbar = createBar(props.dimension, props.cell, {
+                  new: true
+                });
 
-              ;[...Array(newbar.length)].forEach((na, i) => {
-                selectionRange[i + newbar.column] = true
-              })
+                const selectionRange = {};
 
-              setTitleRange(selectionRange)
+                [...Array(newbar.length)].forEach((na, i) => {
+                  selectionRange[i + newbar.column] = true;
+                });
 
-              setHoverRow(newbar.row)
-              setNewReservation(newbar)
-              addBar(newbar)
-              setDraggingElement(newbar)
-              setIsEditing(true)
-            }}
-            pointerCancelGrid={(e) => {
-              console.log('pionter cancel grid')
-            }}
-            pointerMoveGrid={(e) => {
-              if (isDragging && !isEditing) {
-                setStyle(
-                  `.reserver-drag{transform: translate(${
-                    e.pageX - draggingElement.draggingLeft
-                  }px,${e.pageY - draggingElement.draggingTop}px)}`
-                )
-              }
-            }}
-            pointerEnterCell={(props, e) => {
-              // console.log("Eeee",e.pointerId)
-              e.target.releasePointerCapture(e.pointerId)
-              if (isDragging && !isEditing) {
-                const selectionRange = {}
-                ;[...Array(draggingElement.length)].forEach((na, i) => {
-                  selectionRange[
-                    i + props.cell.column - draggingElement.selectedCell
-                  ] = true
-                })
-                setHoverRow(props.cell.row)
-                setTitleRange(selectionRange)
-              }
+                setTitleRange(selectionRange);
 
-              if (isEditing) {
-                const ebar = evaluatePosition(draggingElement, props.cell)
-
-                const selectionRange = {}
-
-                ;[...Array(ebar.length)].forEach((na, i) => {
-                  selectionRange[i + ebar.column] = true
-                })
-                setHoverRow(ebar.row)
-                setTitleRange(selectionRange)
-                setDraggingElement(ebar)
-                editBar(ebar)
-              }
-            }}
-            pointerUpCell={({ cell }) => {
-              console.log('pointer up cell')
-              console.log('isdragging', isDragging)
-              console.log('isediting', isEditing)
-
-              if (isDragging && !isEditing) {
-                const bar = {
-                  ...draggingElement,
-                  row: cell.row,
-                  column: cell.column - draggingElement.selectedCell,
-                  moving: false
+                setHoverRow(newbar.row);
+                setNewReservation(newbar);
+                addBar(newbar);
+                setDraggingElement(newbar);
+                setIsEditing(true);
+              }}
+              onPointerMove={(e) => {
+                if (isDragging && !isEditing && draggingElement) {
+                  setStyle(
+                    `.reserver-drag{transform: translate(${
+                      e.pageX - (draggingElement.draggingLeft || 0)
+                    }px,${e.pageY - (draggingElement.draggingTop || 0)}px)}`
+                  );
+                }
+              }}
+              pointerEnterCell={(props, e) => {
+                (e.target as Element).releasePointerCapture(e.pointerId);
+                if (isDragging && !isEditing && draggingElement) {
+                  const selectionRange = {};
+                  [...Array(draggingElement?.length)].forEach((na, i) => {
+                    if (draggingElement.selectedCell !== undefined) {
+                      selectionRange[i + props.cell.column - draggingElement.selectedCell] = true;
+                    }
+                  });
+                  setHoverRow(props.cell.row);
+                  setTitleRange(selectionRange);
                 }
 
-                editBar(bar)
+                if (isEditing && draggingElement) {
+                  const evaluatedBar = evaluatePosition(draggingElement, props.cell);
 
-                setStyle(`.reserver-drag{transform: translate(0px,0px)}`)
-                setTitleRange({})
-                setHoverRow(-1)
-                setIsDragging(false)
-              }
+                  const selectionRange = {};
 
-              if (isEditing) {
-                const bar = bars.find((bar) => {
-                  return bar.editing
-                })
-                if (!isObjectEmpty(newReservation)) {
-                  setNewReservation(bar)
-                  // toggleAddReservation()
+                  [...Array(evaluatedBar.length)].forEach((na, i) => {
+                    selectionRange[i + evaluatedBar.column] = true;
+                  });
+                  setHoverRow(evaluatedBar.row);
+                  setTitleRange(selectionRange);
+                  setDraggingElement(evaluatedBar);
+                  editBar(evaluatedBar);
+                }
+              }}
+              pointerUpCell={({ cell }) => {
+                if (isDragging && !isEditing && draggingElement && draggingElement.selectedCell) {
+                  const bar = {
+                    ...draggingElement,
+                    row: cell.row,
+                    column: (cell?.column || 0) - draggingElement.selectedCell,
+                    moving: false
+                  };
+
+                  editBar(bar);
+
+                  setStyle(`.reserver-drag{transform: translate(0px,0px)}`);
+                  setTitleRange({});
+                  setHoverRow(-1);
+                  setIsDragging(false);
                 }
 
-                editBar({ ...bar, editing: false })
-                setHoverRow(-1)
-                setTitleRange({})
-                setIsEditing(false)
-              }
-            }}
-          >
-            {({ columnTitleHeight, rowTitleWidth }) => {
-              return bars.map((bar) => {
+                if (isEditing) {
+                  const bar = bars.find((bar) => {
+                    return bar.editing;
+                  });
+                  if (!isObjectEmpty(newReservation)) {
+                    setNewReservation(bar || null);
+                    // toggleAddReservation()
+                  }
+
+                  editBar({ ...bar, editing: false });
+                  setHoverRow(-1);
+                  setTitleRange({});
+                  setIsEditing(false);
+                }
+              }}
+            >
+              {({ columnTitleHeight, rowTitleWidth }) => {
                 return (
-                  <Bar
-                    draggable
-                    {...bar}
-                    onPointerDown={(e, bar) => {
-                      e.target.releasePointerCapture(e.pointerId)
-                      console.log('pointerdown', isEditing)
-                      if (isEditing) {
-                        console.log('inside')
-                        e.preventDefault()
+                  <>
+                    {bars.map((bar) => {
+                      return (
+                        <Bar
+                          id={bar.id}
+                          draggable
+                          length={bar.length}
+                          dimension={bar.dimension}
+                          style={{
+                            ...(bar as unknown as { style: React.CSSProperties }).style,
+                            borderRadius: '6px',
+                            pointerEvents: bar.editing || bar.moving ? 'none' : 'auto',
+                            zIndex: 1000,
+                            ...getPosition(
+                              bar.row,
+                              bar.column,
+                              bar.dimension,
+                              rowTitleWidth,
+                              columnTitleHeight
+                            )
+                          }}
+                          onPointerDown={(e) => {
+                            (e.target as Element).releasePointerCapture(e.pointerId);
+                            if (isEditing) {
+                              e.preventDefault();
 
-                        return
-                      }
-                      console.log('after')
+                              return;
+                            }
 
-                      const target = e.currentTarget.getBoundingClientRect()
+                            const target = e.currentTarget.getBoundingClientRect();
 
-                      const relativeX = e.pageX - target.left
-                      const relativeY = e.pageY - target.top
+                            const relativeX = e.pageX - target.left;
+                            const relativeY = e.pageY - target.top;
 
-                      const selectedCell = parseInt(
-                        relativeX / bar.dimension.width
-                      )
+                            const selectedCell = parseInt(`${relativeX / bar.dimension.width}`);
 
-                      const element = {
-                        ...bar,
-                        selectedCell: selectedCell,
-                        moving: true,
-                        draggingLeft: e.pageX,
-                        draggingTop: e.pageY
-                      }
+                            const element: DraggingElement = {
+                              ...bar,
+                              selectedCell: selectedCell,
+                              moving: true,
+                              draggingLeft: e.pageX,
+                              draggingTop: e.pageY,
+                              stick: 'left'
+                            };
 
-                      const exceptionObject = {}
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const exceptionObject: any = {};
 
-                      exceptionObject.barEnd = {
-                        x: bar.dimension.width * bar.length - relativeX,
-                        y:
-                          bar.dimension.height -
-                          bar.dimension.height * 0.5 -
-                          relativeY
-                      }
+                            exceptionObject.barEnd = {
+                              x: bar.dimension.width * bar.length - relativeX,
+                              y: bar.dimension.height - bar.dimension.height * 0.5 - relativeY
+                            };
 
-                      exceptionObject.barStart = {
-                        x: relativeX,
-                        y: relativeY - bar.dimension.height * 0.5
-                      }
+                            exceptionObject.barStart = {
+                              x: relativeX,
+                              y: relativeY - bar.dimension.height * 0.5
+                            };
 
-                      if (bar.to) {
-                        const toBarIndex = bars.findIndex((b) => {
-                          return b.id === bar.to
-                        })
-                        const toBar = bars[toBarIndex]
-                        if (toBarIndex > -1) {
-                          exceptionObject.to = calculateLinePoint(
-                            toBar.column,
-                            toBar.dimension.width,
-                            columnTitleHeight,
-                            toBar.row,
-                            toBar.dimension.height,
-                            rowTitleWidth
-                          )
-                        }
-                      }
-                      if (bar.from) {
-                        const fromBarIndex = bars.findIndex((b) => {
-                          return b.id === bar.from
-                        })
-                        const fromBar = bars[fromBarIndex]
-                        exceptionObject['from' + fromBar.id] = fromBar.id
-                        if (fromBarIndex > -1) {
-                          const location = calculateLinePoint(
-                            fromBar.column,
-                            fromBar.dimension.width,
-                            columnTitleHeight,
-                            fromBar.row,
-                            fromBar.dimension.height,
-                            rowTitleWidth
-                          )
-                          exceptionObject.from = {
-                            x:
-                              fromBar.dimension.width * fromBar.length +
-                              location.x,
-                            y: location.y
+                            if (bar.to) {
+                              const toBarIndex = bars.findIndex((b) => {
+                                return b.id === bar.to;
+                              });
+                              const toBar = bars[toBarIndex];
+                              if (toBarIndex > -1) {
+                                exceptionObject.to = calculateLinePoint(
+                                  toBar.column,
+                                  toBar.dimension.width,
+                                  columnTitleHeight,
+                                  toBar.row,
+                                  toBar.dimension.height,
+                                  rowTitleWidth
+                                );
+                              }
+                            }
+                            if (bar.from) {
+                              const fromBarIndex = bars.findIndex((b) => {
+                                return b.id === bar.from;
+                              });
+                              const fromBar = bars[fromBarIndex];
+                              exceptionObject['from' + fromBar.id] = fromBar.id;
+                              if (
+                                fromBarIndex > -1 &&
+                                fromBar.column !== undefined &&
+                                fromBar.row !== undefined
+                              ) {
+                                const location = calculateLinePoint(
+                                  fromBar.column,
+                                  fromBar.dimension.width,
+                                  columnTitleHeight,
+                                  fromBar.row,
+                                  fromBar.dimension.height,
+                                  rowTitleWidth
+                                );
+                                exceptionObject.from = {
+                                  x: fromBar.dimension.width * fromBar.length + location.x,
+                                  y: location.y
+                                };
+                              }
+                            }
+
+                            editBar(element);
+                            setDraggingElement(element);
+                            setIsDragging(true);
+                          }}
+                          key={bar.id}
+                          className={bar.moving ? 'reserver-drag' : ''}
+                          lastContent={
+                            <div
+                              style={{
+                                zIndex: 10000,
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <img
+                                role="button"
+                                style={{
+                                  marginRight: '3px',
+                                  height: '20px',
+                                  cursor: 'e-resize'
+                                }}
+                                onPointerDown={(e) => {
+                                  e.stopPropagation();
+                                  (e.target as Element).releasePointerCapture(e.pointerId);
+                                  const newbar: DraggingElement = {
+                                    ...bar,
+                                    stick: 'left',
+                                    editing: true
+                                  };
+                                  editBar(newbar);
+                                  setDraggingElement(newbar);
+                                  setIsEditing(true);
+                                }}
+                                src="/dragicon.png"
+                              />
+                            </div>
                           }
-                        }
-                      }
+                          firstContent={
+                            <div
+                              style={{
+                                zIndex: 10000,
+                                display: 'flex',
+                                justifyContent: 'flex-start',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <img
+                                role="button"
+                                style={{
+                                  marginLeft: '3px',
+                                  height: '20px',
 
-                      editBar(element)
-                      setDraggingElement(element)
-                      console.log('set is dragging true')
-                      setIsDragging(true)
-                    }}
-                    key={bar.id}
-                    className={bar.moving ? 'reserver-drag' : ''}
-                    lastContent={
-                      <div
-                        style={{
-                          zIndex: 10000,
-                          display: 'flex',
-                          justifyContent: 'flex-end',
-                          alignItems: 'center'
-                        }}
-                      >
-                        <img
-                          style={{ marginRight: '3px', height: '20px' }}
-                          onPointerDown={(e) => {
-                            console.log('last content clicked')
-
-                            e.stopPropagation()
-                            e.target.releasePointerCapture(e.pointerId)
-                            const newbar = {
-                              ...bar,
-                              stick: 'left',
-                              editing: true
-                            }
-                            editBar(newbar)
-                            setDraggingElement(newbar)
-                            setIsEditing(true)
-                          }}
-                          src='/react-reserver/resources/images/dragicon.png'
-                        />
-                      </div>
-                    }
-                    firstContent={
-                      <div
-                        style={{
-                          zIndex: 10000,
-                          display: 'flex',
-                          justifyContent: 'flex-start',
-                          alignItems: 'center'
-                        }}
-                      >
-                        <img
-                          style={{ marginLeft: '3px', height: '20px' }}
-                          onPointerDown={(e) => {
-                            e.stopPropagation()
-                            e.target.releasePointerCapture(e.pointerId)
-                            const newbar = {
-                              ...bar,
-                              stick: 'right',
-                              editing: true
-                            }
-                            editBar(newbar)
-                            setDraggingElement(newbar)
-                            setIsEditing(true)
-                          }}
-                          src='/react-reserver/resources/images/dragicon.png'
-                        />
-                      </div>
-                    }
-                    style={{
-                      ...bar.style,
-                      borderRadius: '6px',
-                      pointerEvents:
-                        bar.editing || bar.moving ? 'none' : 'auto',
-                      zIndex: 1000,
-                      ...getPosition(
-                        bar.row,
-                        bar.column,
-                        bar.dimension,
-                        rowTitleWidth,
-                        columnTitleHeight
-                      )
-                    }}
-                  >
-                    <Tag
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        overflow: 'hidden',
-                        color: '#fff',
-                        borderRadius: '6px',
-                        width: bar.length * bar.dimension.width - 14,
-                        marginLeft: '14px'
-                      }}
-                    >
-                      {bar.name}
-                    </Tag>
-                  </Bar>
-                )
-              })
-            }}
-          </Reserver>
+                                  cursor: 'e-resize'
+                                }}
+                                onPointerDown={(e) => {
+                                  e.stopPropagation();
+                                  (e.target as Element).releasePointerCapture(e.pointerId);
+                                  const newbar: DraggingElement = {
+                                    ...bar,
+                                    stick: 'right',
+                                    editing: true
+                                  };
+                                  editBar(newbar);
+                                  setDraggingElement(newbar);
+                                  setIsEditing(true);
+                                }}
+                                src="/dragicon.png"
+                              />
+                            </div>
+                          }
+                        >
+                          <Tag
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              overflow: 'hidden',
+                              color: '#fff',
+                              borderRadius: '6px',
+                              width: bar.length * bar.dimension.width - 32,
+                              marginLeft: '14px',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {bar.name}
+                          </Tag>
+                        </Bar>
+                      );
+                    })}
+                  </>
+                );
+              }}
+            </Reserver>
+          ) : null}
         </div>
       </div>
       {/* <Modali.Modal {...addReservationModal}>
@@ -700,5 +547,5 @@ export default function HotelReservation(props) {
         </div>
       </Modali.Modal> */}
     </>
-  )
+  );
 }

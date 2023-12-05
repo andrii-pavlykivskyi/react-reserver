@@ -1,55 +1,30 @@
-import moment from 'moment'
+import moment, { Moment } from 'moment';
 
-export function dateRange(start, length, unit, format = 'D') {
+type Unit = moment.unitOfTime.DurationConstructor;
+
+export function dateRange(start: string, length: number, unit: Unit, format = 'D') {
   return [...Array(length)].map((nu, i) => {
-    return resolveDate(start, i, unit, format)
-  })
+    return resolveDate(start, i, unit, format);
+  });
 }
 
-export function getRandomInt(min, max) {
-  min = Math.ceil(min)
-  max = Math.floor(max)
-  return Math.floor(Math.random() * (max - min)) + min // The maximum is exclusive and the minimum is inclusive
+export function resolveDate(start: string, count: number, unit: Unit, format: string) {
+  return moment(start).add(count, unit).format(format);
 }
 
-export function resolveDate(start, count, unit, format) {
-  return moment(start).add(count, unit).format(format)
-}
-
-export function resolveDateDiff(startDate, date, format = 'DD-MM-YYYY') {
-  const a = moment(startDate, format).startOf('day')
-  const b = moment(date, format).startOf('day')
-  return b.diff(a, 'days')
-}
-
-export function resolveRow(rooms, roomId) {
-  return rooms[roomId].row
-}
-
-export function positionToDate(
-  bar,
-  startDate,
-  unit = 'unit',
+export function resolveDateDiff(
+  startDate: string | Moment,
+  date: string | Moment,
   format = 'DD-MM-YYYY'
 ) {
-  bar.start = startDate.clone().add(bar.column, unit).format(format)
-  bar.end = startDate
-    .clone()
-    .add(bar.column + bar.length, unit)
-    .format(format)
-  return bar
+  const a = typeof startDate === 'string' ? moment(startDate, format).startOf('day') : startDate;
+  const b = typeof date === 'string' ? moment(date, format).startOf('day') : date;
+
+  return b.diff(a, 'days');
 }
 
-export function getRandomColor() {
-  const letters = '0123456789ABCDEF'
-  let color = '#'
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)]
-  }
-  return color
-}
-
-export function isObjectEmpty(obj) {
-  for (const i in obj) return false
-  return true
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function isObjectEmpty(obj: any) {
+  for (const i in obj) return false;
+  return true;
 }
