@@ -9,7 +9,6 @@ import Reserver, {
   Tag,
   evaluatePosition
 } from '../lib/main';
-import './index.css';
 import clsx from 'clsx';
 
 import moment from 'moment';
@@ -168,13 +167,14 @@ export default function HotelReservation() {
   const handleDropBarOnCell: CellEventHandler = ({ cell }, e) => {
     e.currentTarget.releasePointerCapture((e as unknown as { pointerId: number }).pointerId);
 
+    const newColumnValue = (cell?.column || 0) - (draggingElement?.selectedCell || 0);
+    const newColumn = newColumnValue < 0 ? 0 : newColumnValue;
+
     if (isDragging && !isEditing && draggingElement && draggingElement.selectedCell !== undefined) {
       const bar: StateBar = {
         ...draggingElement,
         row: isColliding ? draggingElement.row : cell.row,
-        column: isColliding
-          ? draggingElement.column
-          : (cell?.column || 0) - draggingElement.selectedCell,
+        column: isColliding ? draggingElement.column : newColumn,
         moving: false
       };
 
@@ -305,12 +305,13 @@ export default function HotelReservation() {
 
                   if (isDragging && !isEditing && draggingElement) {
                     const newColumnValue = props.cell.column - (draggingElement.selectedCell || 0);
+                    const newColumn = newColumnValue < 0 ? 0 : newColumnValue;
 
                     const collision = hasCollisions(
                       {
                         ...draggingElement,
                         row: props.cell.row || draggingElement.row,
-                        column: newColumnValue
+                        column: newColumn
                       },
                       bars.filter((b) => b.id !== draggingElement.id)
                     );
@@ -320,7 +321,7 @@ export default function HotelReservation() {
                       }
                       return {
                         ...prev,
-                        column: collision ? prev.column : newColumnValue,
+                        column: collision ? prev.column : newColumn,
                         row: collision ? prev?.row : props.cell.row
                       };
                     });

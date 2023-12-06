@@ -1,21 +1,23 @@
 import { useEffect, useRef, useCallback } from 'react';
 
-function useStyle() {
+function useStyle(initialStyles?: string) {
   const el = useRef(document.createElement('style'));
 
   useEffect(() => {
-    el.current.type = 'text/css';
-
-    // Add it to the head of the document
-
+    if (initialStyles) {
+      el.current.innerHTML = initialStyles;
+    }
     const head = document.querySelector('head')!;
-    head.appendChild(el.current);
+    const childElement = el.current;
+    head.appendChild(childElement);
 
-    // At some future point we can totally redefine the entire content of the style element
-  }, []);
+    return () => {
+      head.removeChild(childElement);
+    };
+  }, [initialStyles]);
 
   const setStyle = useCallback((newStyles: string) => {
-    el.current.innerHTML = newStyles;
+    el.current.innerHTML += `\n${newStyles}`;
   }, []);
 
   return setStyle;

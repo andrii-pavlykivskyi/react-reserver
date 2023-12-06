@@ -23,7 +23,21 @@ const Reserver = React.forwardRef<HTMLDivElement, ReserverProps>(
     },
     ref
   ) => {
-    const setStyle = useStyle();
+    const setStyle = useStyle(`
+    .reserver-cell:hover > div {
+      background: #e4e8e9 !important;
+    }  
+    .peg-drop-place {
+      position: relative;
+    }
+    .peg-drop-place::after {
+      content: '';
+      inset: 0px;
+      background-color: #0e6ba830;
+      z-index: 20000;
+      position: absolute;
+    }
+    `);
 
     useEffect(() => {
       setStyle(`
@@ -35,9 +49,6 @@ const Reserver = React.forwardRef<HTMLDivElement, ReserverProps>(
         border-bottom-right-radius: ${dimension.height}px;
         border-top-right-radius: ${dimension.height}px;
       }
-      .reserver-cell:hover > div {
-        background: #e4e8e9 !important;
-      }  
       `);
     }, [dimension, setStyle]);
 
