@@ -44,7 +44,6 @@ export default function Bar({
         display: props.style?.display || 'flex',
         position: props.style?.position || 'absolute',
         zIndex: props.style?.zIndex || '100',
-        cursor: 'move'
       }}
       className={props.className}
     >

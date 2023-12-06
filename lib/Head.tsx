@@ -41,6 +41,7 @@ export default function Head({
           row={-1}
           column={-1}
           className={props.cantonClassName}
+          isHeading
         >
           {canton}
         </Cell>
@@ -55,6 +56,7 @@ export default function Head({
             column={i}
             row={-1}
             className={props.columnTitleClassName}
+            isHeading
           >
             {headitem}
           </Cell>
@@ -69,6 +71,7 @@ export default function Head({
           row={-1}
           column={props.columnTitles.length}
           className={props.cantonClassName}
+          isHeading
         >
           {canton}
         </Cell>

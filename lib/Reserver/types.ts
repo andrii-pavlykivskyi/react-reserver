@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Dimension } from '../types';
-import { CellEventHandler, CellPointerEventHandler } from '../Cell';
+import { CellProps } from '../Cell';
 import { HeadProps } from '../Head';
 
 export type ReserverContent = Record<`r${number}c${number}`, ReactNode>;
@@ -18,30 +18,21 @@ export type ChildrenProps = {
 };
 
 export type ReserverProps = Omit<React.ComponentProps<'div'>, 'content' | 'children'> & {
-  content?: GetReserverContent;
   dimension: Dimension;
   rowTitleWidth: number;
   rowTitles: Titles;
   columnTitles: Titles;
   columnTitleHeight: number;
+
   columnTitleClassName?: string;
   cantonClassName?: string;
   rowTitleClassName?: string;
   cellClassName?: string;
-
-  mouseDownCell?: CellEventHandler;
-  mouseEnterCell?: CellEventHandler;
-  mouseUpCell?: CellEventHandler;
-  mouseDropCell?: CellEventHandler;
-  mouseDragOverCell?: CellEventHandler;
-  pointerDownCell?: CellPointerEventHandler;
-  pointerMoveCell?: CellPointerEventHandler;
-  pointerEnterCell?: CellPointerEventHandler;
-  pointerLeaveCell?: CellPointerEventHandler;
-  pointerUpCell?: CellPointerEventHandler;
-  pointerOverCell?: CellPointerEventHandler;
+  isDragging?: boolean;
+  content?: GetReserverContent;
 
   children: (props: ChildrenProps) => ReactNode;
 
   HeadProps?: Partial<HeadProps>;
+  BodyCellProps?: Partial<CellProps>;
 };

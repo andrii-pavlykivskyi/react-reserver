@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Head from '../Head';
 import Cell from '../Cell';
 import { ReserverProps, GetReserverContent } from './types';
+import useStyle from '../hooks/useStyle';
 
 const Reserver = React.forwardRef<HTMLDivElement, ReserverProps>(
   (
@@ -13,13 +14,30 @@ const Reserver = React.forwardRef<HTMLDivElement, ReserverProps>(
       rowTitleWidth = 0,
       columnTitleHeight = 0,
       dir = 'ltr',
+      isDragging = false,
 
       children,
       HeadProps,
+      BodyCellProps,
       ...props
     },
     ref
   ) => {
+    const setStyle = useStyle();
+
+    useEffect(() => {
+      setStyle(`
+      .peg-drop-place-first::after {
+        border-bottom-left-radius: ${dimension.height}px;
+        border-top-left-radius: ${dimension.height}px;
+      }
+      .peg-drop-place-last::after {
+        border-bottom-right-radius: ${dimension.height}px;
+        border-top-right-radius: ${dimension.height}px;
+      }
+      `);
+    }, [dimension, setStyle]);
+
     const columnCount = (columnTitles || []).length;
     const rowCount = (rowTitles || []).length;
 
@@ -33,6 +51,7 @@ const Reserver = React.forwardRef<HTMLDivElement, ReserverProps>(
         id={props.id}
         className={props.className}
         role="grid"
+        {...props}
         style={{ ...props.style, position: 'relative', minWidth }}
       >
         <Head
@@ -59,6 +78,7 @@ const Reserver = React.forwardRef<HTMLDivElement, ReserverProps>(
                     height: dimension.height,
                     width: rowTitleWidth
                   }}
+                  isHeading
                   className={props.rowTitleClassName}
                 >
                   {rowTitles[r]}
@@ -67,22 +87,14 @@ const Reserver = React.forwardRef<HTMLDivElement, ReserverProps>(
               {[...Array(columnCount)].map((_, c) => {
                 return (
                   <Cell
+                    {...BodyCellProps}
                     key={`r${r}c${c}`}
-                    onMouseDown={props.mouseDownCell}
-                    onMouseEnter={props.mouseEnterCell}
-                    onMouseUp={props.mouseUpCell}
-                    onDrop={props.mouseDropCell}
-                    onDragOver={props.mouseDragOverCell}
-                    onPointerDown={props.pointerDownCell}
-                    onPointerMove={props.pointerMoveCell}
-                    onPointerEnter={props.pointerEnterCell}
-                    onPointerLeave={props.pointerLeaveCell}
-                    onPointerUp={props.pointerUpCell}
-                    onPointerOver={props.pointerOverCell}
                     dimension={dimension}
                     className={props.cellClassName}
                     column={c}
                     row={r}
+                    isDragging={isDragging}
+                    isHeading={false}
                   >
                     {content[`r${r}c${c}`]}
                   </Cell>
@@ -92,6 +104,7 @@ const Reserver = React.forwardRef<HTMLDivElement, ReserverProps>(
                 <Cell
                   column={-1}
                   row={r}
+                  isHeading
                   style={{ display: rowTitles.length > 0 ? 'initial' : 'none' }}
                   dimension={{
                     height: dimension.height,

@@ -17,27 +17,7 @@ import { isObjectEmpty, resolveDateDiff, dateRange } from './helpers';
 import { hotelReservations } from './testdata';
 import { BarStick, TBar } from '../lib/types';
 import { StateBar } from '../lib/reserverReducer';
-
-function useStyle() {
-  const el = useRef(document.createElement('style'));
-
-  useEffect(() => {
-    el.current.type = 'text/css';
-
-    // Add it to the head of the document
-
-    const head = document.querySelector('head');
-    head?.appendChild(el.current);
-
-    // At some future point we can totally redefine the entire content of the style element
-  }, []);
-
-  const setStyle = (newStyles) => {
-    el.current.innerHTML = newStyles;
-  };
-
-  return setStyle;
-}
+import useStyle from './../lib/hooks/useStyle';
 
 type DraggingElement =
   | (TBar & {
@@ -185,7 +165,8 @@ export default function HotelReservation() {
           flexDirection: 'column',
           justifyContent: 'center',
           touchAction: 'none',
-          userSelect: 'none'
+          userSelect: 'none',
+          cursor: isDragging ? 'grabbing' : 'unset'
         }}
       >
         <div
@@ -203,6 +184,7 @@ export default function HotelReservation() {
               columnTitleHeight={columnTitleHeight}
               dimension={cellDimension}
               rowTitleWidth={rowTitleWidth}
+              isDragging={isDragging}
               rowTitles={generateRowTitles(hoverRow)}
               columnTitles={generateColumnTitles({
                 date: startDate.toISOString(),
@@ -218,7 +200,7 @@ export default function HotelReservation() {
                     Array(columnCount)
                       .fill(null)
                       .forEach((_, c) => {
-                        const isDropPlace = titleRange[c] && hoverRow === r;
+                        const isDropPlace = isDragging && titleRange[c] && hoverRow === r;
 
                         const dropColumnsIndexes = Object.entries(titleRange)
                           .filter(([, value]) => !!value)
@@ -244,26 +226,114 @@ export default function HotelReservation() {
 
                 return content;
               }}
-              pointerDownCell={(props, e) => {
-                (e.target as Element).releasePointerCapture(e.pointerId);
-                const newbar = createBar(props.dimension, props.cell, {
-                  new: true
-                });
+              BodyCellProps={{
+                onPointerDown: (props, e) => {
+                  (e.target as Element).releasePointerCapture(e.pointerId);
+                  const newbar = createBar(props.dimension, props.cell, {
+                    new: true
+                  });
 
-                const selectionRange = {};
+                  const selectionRange = {};
 
-                [...Array(newbar.length)].forEach((na, i) => {
-                  selectionRange[i + newbar.column] = true;
-                });
+                  [...Array(newbar.length)].forEach((na, i) => {
+                    selectionRange[i + newbar.column] = true;
+                  });
 
-                setTitleRange(selectionRange);
+                  setTitleRange(selectionRange);
 
-                setHoverRow(newbar.row);
-                setNewReservation(newbar);
-                addBar(newbar);
-                setDraggingElement(newbar);
-                setIsEditing(true);
+                  setHoverRow(newbar.row);
+                  setNewReservation(newbar);
+                  addBar(newbar);
+                  setDraggingElement(newbar);
+                  setIsEditing(true);
+                },
+                onPointerEnter: (props, e) => {
+                  (e.target as Element).releasePointerCapture(e.pointerId);
+                  if (isDragging && !isEditing && draggingElement) {
+                    const selectionRange = {};
+                    [...Array(draggingElement?.length)].forEach((na, i) => {
+                      if (draggingElement.selectedCell !== undefined) {
+                        selectionRange[i + props.cell.column - draggingElement.selectedCell] = true;
+                      }
+                    });
+                    const cellBar =
+                      bars.find(
+                        (b) =>
+                          b.column <= props.cell.column &&
+                          b.column + b.length >= props.cell.column &&
+                          b.row === props.cell.row
+                      ) || null;
+
+                    if (
+                      bars.some(
+                        (b) =>
+                          b.row === props.cell.row &&
+                          Object.keys(selectionRange).some((k) => +k === b.column) &&
+                          b.id !== cellBar?.id
+                      )
+                    ) {
+                      return;
+                    }
+                    setHoverRow(props.cell.row);
+                    setTitleRange(selectionRange);
+                  }
+
+                  if (isEditing && draggingElement) {
+                    const evaluatedBar = evaluatePosition(draggingElement, props.cell);
+
+                    const selectionRange = {};
+
+                    [...Array(evaluatedBar.length)].forEach((na, i) => {
+                      selectionRange[i + evaluatedBar.column] = true;
+                    });
+                    setHoverRow(evaluatedBar.row);
+                    setTitleRange(selectionRange);
+                    setDraggingElement(evaluatedBar);
+                    editBar(evaluatedBar);
+                  }
+                },
+                onPointerUp: ({ cell }) => {
+                  if (isDragging && !isEditing && draggingElement && draggingElement.selectedCell) {
+                    const bar = {
+                      ...draggingElement,
+                      row: cell.row,
+                      column: (cell?.column || 0) - draggingElement.selectedCell,
+                      moving: false
+                    };
+
+                    editBar(bar);
+
+                    setStyle(`.reserver-drag{transform: translate(0px,0px)}`);
+                    setTitleRange({});
+                    setHoverRow(-1);
+                    setIsDragging(false);
+                  }
+
+                  if (isEditing) {
+                    const bar = bars.find((bar) => {
+                      return bar.editing;
+                    });
+                    if (!isObjectEmpty(newReservation)) {
+                      setNewReservation(bar || null);
+                      // toggleAddReservation()
+                    }
+
+                    editBar({ ...bar, editing: false });
+                    setHoverRow(-1);
+                    setTitleRange({});
+                    setIsEditing(false);
+                  }
+                }
               }}
+              // onPointerLeave={(e) => {
+              //   if (e.buttons === 1) {
+              //     setIsDragging(false);
+              //     setDraggingElement((draggingElement) => {
+              //       editBar({ ...draggingElement, moving: false });
+              //       return null;
+              //     });
+              //   }
+              // }}
               onPointerMove={(e) => {
                 if (isDragging && !isEditing && draggingElement) {
                   setStyle(
@@ -271,65 +341,6 @@ export default function HotelReservation() {
                       e.pageX - (draggingElement.draggingLeft || 0)
                     }px,${e.pageY - (draggingElement.draggingTop || 0)}px)}`
                   );
-                }
-              }}
-              pointerEnterCell={(props, e) => {
-                (e.target as Element).releasePointerCapture(e.pointerId);
-                if (isDragging && !isEditing && draggingElement) {
-                  const selectionRange = {};
-                  [...Array(draggingElement?.length)].forEach((na, i) => {
-                    if (draggingElement.selectedCell !== undefined) {
-                      selectionRange[i + props.cell.column - draggingElement.selectedCell] = true;
-                    }
-                  });
-                  setHoverRow(props.cell.row);
-                  setTitleRange(selectionRange);
-                }
-
-                if (isEditing && draggingElement) {
-                  const evaluatedBar = evaluatePosition(draggingElement, props.cell);
-
-                  const selectionRange = {};
-
-                  [...Array(evaluatedBar.length)].forEach((na, i) => {
-                    selectionRange[i + evaluatedBar.column] = true;
-                  });
-                  setHoverRow(evaluatedBar.row);
-                  setTitleRange(selectionRange);
-                  setDraggingElement(evaluatedBar);
-                  editBar(evaluatedBar);
-                }
-              }}
-              pointerUpCell={({ cell }) => {
-                if (isDragging && !isEditing && draggingElement && draggingElement.selectedCell) {
-                  const bar = {
-                    ...draggingElement,
-                    row: cell.row,
-                    column: (cell?.column || 0) - draggingElement.selectedCell,
-                    moving: false
-                  };
-
-                  editBar(bar);
-
-                  setStyle(`.reserver-drag{transform: translate(0px,0px)}`);
-                  setTitleRange({});
-                  setHoverRow(-1);
-                  setIsDragging(false);
-                }
-
-                if (isEditing) {
-                  const bar = bars.find((bar) => {
-                    return bar.editing;
-                  });
-                  if (!isObjectEmpty(newReservation)) {
-                    setNewReservation(bar || null);
-                    // toggleAddReservation()
-                  }
-
-                  editBar({ ...bar, editing: false });
-                  setHoverRow(-1);
-                  setTitleRange({});
-                  setIsEditing(false);
                 }
               }}
             >
@@ -345,9 +356,11 @@ export default function HotelReservation() {
                           dimension={bar.dimension}
                           style={{
                             ...(bar as unknown as { style: React.CSSProperties }).style,
-                            borderRadius: '6px',
+                            borderRadius: bar.dimension.height / 2,
                             pointerEvents: bar.editing || bar.moving ? 'none' : 'auto',
                             zIndex: 1000,
+                            cursor:
+                              isDragging && draggingElement?.id !== bar.id ? 'not-allowed' : 'grab',
                             ...getPosition(
                               bar.row,
                               bar.column,
@@ -450,11 +463,12 @@ export default function HotelReservation() {
                                 alignItems: 'center'
                               }}
                             >
-                              <img
+                              <div
                                 role="button"
                                 style={{
                                   marginRight: '3px',
                                   height: '20px',
+                                  width: '20px',
                                   cursor: 'e-resize'
                                 }}
                                 onPointerDown={(e) => {
@@ -469,7 +483,7 @@ export default function HotelReservation() {
                                   setDraggingElement(newbar);
                                   setIsEditing(true);
                                 }}
-                                src="/dragicon.png"
+                                // src="/dragicon.png"
                               />
                             </div>
                           }
@@ -482,12 +496,12 @@ export default function HotelReservation() {
                                 alignItems: 'center'
                               }}
                             >
-                              <img
+                              <div
                                 role="button"
                                 style={{
                                   marginLeft: '3px',
                                   height: '20px',
-
+                                  width: '20px',
                                   cursor: 'e-resize'
                                 }}
                                 onPointerDown={(e) => {
@@ -502,7 +516,7 @@ export default function HotelReservation() {
                                   setDraggingElement(newbar);
                                   setIsEditing(true);
                                 }}
-                                src="/dragicon.png"
+                                // src="/dragicon.png"
                               />
                             </div>
                           }

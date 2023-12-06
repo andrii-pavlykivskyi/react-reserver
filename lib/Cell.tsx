@@ -11,10 +11,12 @@ export type CellPointerEventHandler = (p: EventParam, e: React.PointerEvent<Elem
 
 export type CellProps = {
   dimension: Dimension;
-  className?: string;
   column: number;
   row: number;
+  isHeading: boolean;
+  className?: string;
   style?: React.CSSProperties;
+  isDragging?: boolean;
   onDragOver?: CellEventHandler;
   onMouseOver?: CellEventHandler;
   onMouseUp?: CellEventHandler;
@@ -30,11 +32,15 @@ export type CellProps = {
   onPointerUp?: CellPointerEventHandler;
 } & React.PropsWithChildren;
 
-export default function Cell({
+function Cell({
   dimension,
   children,
   className,
   column,
+  isHeading,
+  row,
+  style,
+  isDragging,
   onDragOver,
   onDrop,
   onMouseDown,
@@ -47,9 +53,7 @@ export default function Cell({
   onPointerMove,
   onPointerOut,
   onPointerOver,
-  onPointerUp,
-  row,
-  style
+  onPointerUp
 }: CellProps) {
   return (
     <div
@@ -194,6 +198,7 @@ export default function Cell({
         overflow: 'hidden',
         width: dimension.width,
         height: dimension.height,
+        cursor: isHeading ? 'unset' : isDragging ? 'grabbing' : 'crosshair',
         ...style
       }}
     >
@@ -201,3 +206,5 @@ export default function Cell({
     </div>
   );
 }
+
+export default Cell;
