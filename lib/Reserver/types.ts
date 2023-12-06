@@ -1,38 +1,25 @@
 import { ReactNode } from 'react';
-import { Dimension } from '../types';
-import { CellProps } from '../Cell';
-import { HeadProps } from '../Head';
+import { StateBar } from '../reserverReducer';
+import { BarStick } from '../types';
 
-export type ReserverContent = Record<`r${number}c${number}`, ReactNode>;
+export type DraggingElement =
+  | (StateBar & {
+      draggingLeft?: number;
+      draggingTop?: number;
+      selectedCell?: number;
+      moving?: boolean;
+      stick?: BarStick;
+    })
+  | null;
 
-export type GetReserverContent = (columnCount: number, rowCount: number) => ReserverContent;
+export type SelectedColumns = Record<number, boolean>;
 
-type Titles = ReactNode[];
-
-export type ChildrenProps = {
-  rowCount: number;
-  columnCount: number;
-  rowTitleWidth: number;
-  dimension: Dimension;
-  columnTitleHeight: number;
+export type ReservationItem = {
+  name: ReactNode;
+  background: string;
+  number: number;
 };
 
-export type ReserverProps = Omit<React.ComponentProps<'div'>, 'content' | 'children'> & {
-  dimension: Dimension;
-  rowTitleWidth: number;
-  rowTitles: Titles;
-  columnTitles: Titles;
-  columnTitleHeight: number;
-
-  columnTitleClassName?: string;
-  cantonClassName?: string;
-  rowTitleClassName?: string;
-  cellClassName?: string;
-  isDragging?: boolean;
-  content?: GetReserverContent;
-
-  children: (props: ChildrenProps) => ReactNode;
-
-  HeadProps?: Partial<HeadProps>;
-  BodyCellProps?: Partial<CellProps>;
+export type ReserverProps = {
+  reservationItems: ReservationItem[];
 };
