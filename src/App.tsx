@@ -165,7 +165,9 @@ export default function HotelReservation() {
 
   const reserverWidth = windowRef.current?.getBoundingClientRect().width || 0;
 
-  const handleDropBarOnCell: CellEventHandler = ({ cell }) => {
+  const handleDropBarOnCell: CellEventHandler = ({ cell }, e) => {
+    e.currentTarget.releasePointerCapture((e as unknown as { pointerId: number }).pointerId);
+
     if (isDragging && !isEditing && draggingElement && draggingElement.selectedCell !== undefined) {
       const bar: StateBar = {
         ...draggingElement,
@@ -180,6 +182,7 @@ export default function HotelReservation() {
 
       setStyle(`.reserver-drag{transform: translate(0px,0px)}`);
       setIsDragging(false);
+      setDraggingElement(null);
       setIsColliding(false);
     }
 
@@ -286,7 +289,7 @@ export default function HotelReservation() {
                     handleDropBarOnCell(props, e);
                     return;
                   }
-                  (e.target as Element).releasePointerCapture(e.pointerId);
+                  e.currentTarget.releasePointerCapture(e.pointerId);
                   const newbar = createBar(props.dimension, props.cell, {
                     new: true
                   });
@@ -298,7 +301,7 @@ export default function HotelReservation() {
                 },
                 isResizing: isEditing,
                 onPointerEnter: (props, e) => {
-                  (e.target as Element).releasePointerCapture(e.pointerId);
+                  e.currentTarget.releasePointerCapture(e.pointerId);
 
                   if (isDragging && !isEditing && draggingElement) {
                     const newColumnValue = props.cell.column - (draggingElement.selectedCell || 0);
@@ -317,23 +320,41 @@ export default function HotelReservation() {
                       }
                       return {
                         ...prev,
-                        column: newColumnValue,
+                        column: collision ? prev.column : newColumnValue,
                         row: collision ? prev?.row : props.cell.row
                       };
                     });
                     setIsColliding(collision);
                   }
 
-                  if (isEditing && draggingElement) {
-                    const evaluatedBar = evaluatePosition(draggingElement, props.cell);
+                  if (isEditing) {
+                    setDraggingElement((prev) => {
+                      if (!prev) {
+                        return prev;
+                      }
+                      const evaluatedBar = evaluatePosition(prev, props.cell);
 
-                    setDraggingElement(evaluatedBar);
-                    editBar(evaluatedBar);
+                      const collision = hasCollisions(
+                        evaluatedBar,
+                        bars.filter((b) => b.id !== evaluatedBar.id)
+                      );
+
+                      if (collision) {
+                        editBar(prev);
+                        return prev;
+                      }
+                      if (evaluatedBar) {
+                        editBar(evaluatedBar);
+                      }
+                      return evaluatedBar;
+                    });
                   }
                 },
                 onPointerUp: handleDropBarOnCell
               }}
               onPointerMove={(e) => {
+                e.currentTarget.releasePointerCapture(e.pointerId);
+
                 if (isDragging && !isEditing && draggingElement) {
                   setStyle(
                     `.reserver-drag{transform: translate(${
@@ -362,6 +383,7 @@ export default function HotelReservation() {
                                 ? 'none'
                                 : 'auto',
                             zIndex: isDragging && draggingElement?.id === bar.id ? 1001 : 1000,
+                            scale: isEditing && draggingElement?.id === bar.id ? '103%' : undefined,
                             transition: '.15s ease-in-out scale',
                             cursor:
                               isDragging && draggingElement?.id !== bar.id ? 'not-allowed' : 'grab',
@@ -374,7 +396,7 @@ export default function HotelReservation() {
                             )
                           }}
                           onPointerDown={(e) => {
-                            (e.target as Element).releasePointerCapture(e.pointerId);
+                            e.currentTarget.releasePointerCapture(e.pointerId);
                             if (isEditing) {
                               e.preventDefault();
 
@@ -477,14 +499,14 @@ export default function HotelReservation() {
                                 }}
                                 onPointerDown={(e) => {
                                   e.stopPropagation();
-                                  (e.target as Element).releasePointerCapture(e.pointerId);
-                                  const newbar: DraggingElement = {
+                                  e.currentTarget.releasePointerCapture(e.pointerId);
+                                  const resizedBar: DraggingElement = {
                                     ...bar,
                                     stick: 'left',
                                     editing: true
                                   };
-                                  editBar(newbar);
-                                  setDraggingElement(newbar);
+                                  setDraggingElement(resizedBar);
+                                  editBar(resizedBar);
                                   setIsEditing(true);
                                 }}
                                 // src="/dragicon.png"
@@ -510,7 +532,7 @@ export default function HotelReservation() {
                                 }}
                                 onPointerDown={(e) => {
                                   e.stopPropagation();
-                                  (e.target as Element).releasePointerCapture(e.pointerId);
+                                  e.currentTarget.releasePointerCapture(e.pointerId);
                                   const newbar: DraggingElement = {
                                     ...bar,
                                     stick: 'right',
