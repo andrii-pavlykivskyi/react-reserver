@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import actionTypes from './actionTypes';
-import { Dimension } from './types';
+import { BarStick, Dimension } from './types';
 import { ReactNode } from 'react';
 
 export type StateBar = {
@@ -14,6 +14,7 @@ export type StateBar = {
   dimension: Dimension;
   moving: boolean;
   name: ReactNode;
+  stick: BarStick
 };
 
 type ReserverState = {

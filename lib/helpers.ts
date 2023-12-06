@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { TBar, Dimension, Position } from './types';
+import { StateBar } from './reserverReducer';
+import { Dimension, Position } from './types';
 
 export const isBetween = (min: number, max: number, num: number) => {
   const states = num >= min && max >= num;
@@ -45,7 +46,7 @@ export function getRowCount(dimension: Dimension, height: number) {
   return Math.floor(height / dimension.height);
 }
 
-export function resizeBars(bars: TBar[], newLocation: any, resolver: any) {
+export function resizeBars(bars: StateBar[], newLocation: any, resolver: any) {
   return bars.map((bar) => {
     if (bar.editing) {
       let nBar = evaluatePosition(bar, newLocation.cell);
@@ -60,7 +61,7 @@ export function resizeBars(bars: TBar[], newLocation: any, resolver: any) {
   });
 }
 
-export function finishEditingBars(bars: TBar[]) {
+export function finishEditingBars(bars: StateBar[]) {
   return bars.map((bar) => {
     if (bar.editing) {
       return {
@@ -72,7 +73,7 @@ export function finishEditingBars(bars: TBar[]) {
   });
 }
 
-export function evaluatePosition(bar: TBar, newLocation: any): TBar {
+export function evaluatePosition(bar: StateBar, newLocation: any): StateBar {
   // We check stick right if there is a resizing after originally done.
   // The greater than length 1 is to allow resizing to other direction
   if (bar.column > newLocation.column || (bar.stick === 'right' && bar.length > 1)) {

@@ -17,6 +17,7 @@ export type CellProps = {
   className?: string;
   style?: React.CSSProperties;
   isDragging?: boolean;
+  isResizing?: boolean;
   onDragOver?: CellEventHandler;
   onMouseOver?: CellEventHandler;
   onMouseUp?: CellEventHandler;
@@ -41,6 +42,7 @@ function Cell({
   row,
   style,
   isDragging,
+  isResizing = false,
   onDragOver,
   onDrop,
   onMouseDown,
@@ -198,7 +200,13 @@ function Cell({
         overflow: 'hidden',
         width: dimension.width,
         height: dimension.height,
-        cursor: isHeading ? 'unset' : isDragging ? 'grabbing' : 'crosshair',
+        cursor: isHeading
+          ? 'unset'
+          : isDragging
+          ? 'grabbing'
+          : isResizing
+          ? 'e-resize'
+          : 'crosshair',
         ...style
       }}
     >

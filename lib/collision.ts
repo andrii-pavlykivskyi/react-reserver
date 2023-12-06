@@ -1,7 +1,10 @@
 import { isBetween } from './helpers';
-import { TBar } from './types';
+import { StateBar } from './reserverReducer';
 
-export function checkCollisions(bars: TBar[]) {
+type CollisionBar = Omit<StateBar, 'stick'> &
+  Partial<Pick<StateBar, 'stick'>> & { collisions?: Record<string, boolean | string> };
+
+export function checkCollisions(bars: CollisionBar[]) {
   let nBars = [...bars];
   const editingBars = bars.filter((b) => b.editing);
 
@@ -14,7 +17,10 @@ export function checkCollisions(bars: TBar[]) {
   return nBars;
 }
 
-export function reviewBars(bars: TBar[], eBar: TBar): [TBar[], TBar] {
+export function reviewBars(
+  bars: CollisionBar[],
+  eBar: CollisionBar
+): [CollisionBar[], CollisionBar] {
   let editingBar = { ...eBar };
   const oBars = bars.flatMap((b) => {
     if (b.id === eBar.id) {
@@ -51,35 +57,64 @@ export function reviewBars(bars: TBar[], eBar: TBar): [TBar[], TBar] {
 
   return [oBars, editingBar];
 }
-
-export const collided = (bar1: TBar, bar2: TBar): [TBar, TBar] => {
-  const bar = checkHasCollisionObject(bar1);
-  if (!bar.collisions) {
-    bar.collisions = {};
+export const collided = (bar1: CollisionBar, bar2: CollisionBar) => {
+  if (!bar1.collisions) {
+    bar1.collisions = {};
   }
-  bar.collisions[bar2.id] = '';
+  bar1.collisions[bar2.id] = '';
 
-  const secondBar = checkHasCollisionObject(bar2);
-  if (!secondBar.collisions) {
-    secondBar.collisions = {};
+  if (!bar2.collisions) {
+    bar2.collisions = {};
   }
-  secondBar.collisions[bar1.id] = '';
+  bar2.collisions[bar1.id] = '';
 
-  return [bar, secondBar];
-};
-
-export const checkHasCollisionObject = (bar: TBar): TBar => {
-  return { ...bar, collisions: {} };
-};
-
-export const removeCollision = (bar1: TBar, bar2: TBar) => {
-  bar1 = checkHasCollisionObject(bar1);
-  if (bar1.collisions) {
-    delete bar1.collisions[bar2.id];
-  }
-  bar2 = checkHasCollisionObject(bar2);
-  if (bar2.collisions) {
-    delete bar2.collisions[bar1.id];
-  }
   return [bar1, bar2];
+};
+
+export const removeCollision = (bar1: CollisionBar, bar2: CollisionBar) => {
+  if (!bar1.collisions) {
+    bar1.collisions = {};
+  }
+  delete bar1.collisions[bar2.id];
+  if (!bar2.collisions) {
+    bar2.collisions = {};
+  }
+  delete bar2.collisions[bar1.id];
+  return [bar1, bar2];
+};
+
+function calculateIntersectionLength(
+  start1: number,
+  length1: number,
+  start2: number,
+  length2: number
+) {
+  const end1 = start1 + length1;
+  const end2 = start2 + length2;
+
+  const overlapStart = Math.max(start1, start2);
+  const overlapEnd = Math.min(end1, end2);
+
+  if (overlapStart < overlapEnd) {
+    return overlapEnd - overlapStart;
+  } else {
+    return 0;
+  }
+}
+
+function areBarsColliding(bar1: CollisionBar, bar2: CollisionBar) {
+  const columnsCollision = calculateIntersectionLength(
+    bar1.column,
+    bar1.length,
+    bar2.column,
+    bar2.length
+  );
+
+  const rowsCollision = bar1.row === bar2.row;
+
+  return columnsCollision > 0 && rowsCollision;
+}
+
+export const hasCollisions = (movingBar: CollisionBar, bars: CollisionBar[]) => {
+  return bars.some((b) => areBarsColliding(b, movingBar));
 };

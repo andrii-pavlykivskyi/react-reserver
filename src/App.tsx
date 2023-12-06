@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Reserver, {
   Bar,
   useReserver,
@@ -15,12 +15,14 @@ import clsx from 'clsx';
 import moment from 'moment';
 import { isObjectEmpty, resolveDateDiff, dateRange } from './helpers';
 import { hotelReservations } from './testdata';
-import { BarStick, TBar } from '../lib/types';
+import { BarStick } from '../lib/types';
 import { StateBar } from '../lib/reserverReducer';
 import useStyle from './../lib/hooks/useStyle';
+import { hasCollisions } from './../lib/collision';
+import { CellEventHandler } from '../lib/Cell';
 
 type DraggingElement =
-  | (TBar & {
+  | (StateBar & {
       draggingLeft?: number;
       draggingTop?: number;
       selectedCell?: number;
@@ -29,19 +31,19 @@ type DraggingElement =
     })
   | null;
 
-export type TitleRange = Record<number, boolean>;
+export type SelectedColumns = Record<number, boolean>;
 
 function generateColumnTitles(props: {
   date: string;
   columnCount: number;
-  titleRange: TitleRange;
+  selectedColumns: SelectedColumns;
 }) {
   return dateRange(props.date, props.columnCount, 'days').map((val, index) => {
     return (
       <div
         key={val}
         style={{
-          background: props.titleRange[index] ? '#1ca3f9' : '#fff',
+          background: props.selectedColumns[index] ? '#1ca3f9' : '#fff',
           height: '100%',
           width: '100%',
           textAlign: 'center',
@@ -123,18 +125,24 @@ export default function HotelReservation() {
   const rowTitleWidth = 130;
 
   const daysTotal = 30;
-  // const [guestName, setGuestName] = useState('')
   const [newReservation, setNewReservation] = useState<StateBar | null>(null);
 
   const [isDragging, setIsDragging] = useState(false);
+  const [isColliding, setIsColliding] = useState(false);
 
   const [draggingElement, setDraggingElement] = useState<DraggingElement>(null);
 
-  const [titleRange, setTitleRange] = useState<TitleRange>({});
-  const [hoverRow, setHoverRow] = useState<number | null>(null);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const reserverRef = useRef<any>(null);
+  const hoverRow = draggingElement ? draggingElement.row : null;
+  const selectedColumns = useMemo(() => {
+    const selectionRange = {};
+    if (!draggingElement) {
+      return selectionRange;
+    }
+    [...Array(draggingElement.length)].forEach((na, i) => {
+      selectionRange[i + draggingElement.column] = true;
+    });
+    return selectionRange;
+  }, [draggingElement]);
 
   const setStyle = useStyle();
 
@@ -157,6 +165,39 @@ export default function HotelReservation() {
 
   const reserverWidth = windowRef.current?.getBoundingClientRect().width || 0;
 
+  const handleDropBarOnCell: CellEventHandler = ({ cell }) => {
+    if (isDragging && !isEditing && draggingElement && draggingElement.selectedCell !== undefined) {
+      const bar: StateBar = {
+        ...draggingElement,
+        row: isColliding ? draggingElement.row : cell.row,
+        column: isColliding
+          ? draggingElement.column
+          : (cell?.column || 0) - draggingElement.selectedCell,
+        moving: false
+      };
+
+      editBar(bar);
+
+      setStyle(`.reserver-drag{transform: translate(0px,0px)}`);
+      setIsDragging(false);
+      setIsColliding(false);
+    }
+
+    if (isEditing) {
+      const bar = bars.find((bar) => {
+        return bar.editing;
+      });
+      if (!isObjectEmpty(newReservation)) {
+        setNewReservation(bar || null);
+        // toggleAddReservation()
+      }
+      if (bar) {
+        editBar({ ...bar, editing: false });
+      }
+      setIsEditing(false);
+    }
+  };
+
   return (
     <>
       <div
@@ -166,7 +207,7 @@ export default function HotelReservation() {
           justifyContent: 'center',
           touchAction: 'none',
           userSelect: 'none',
-          cursor: isDragging ? 'grabbing' : 'unset'
+          cursor: isColliding ? 'not-allowed' : isDragging ? 'grabbing' : 'unset'
         }}
       >
         <div
@@ -180,7 +221,6 @@ export default function HotelReservation() {
         >
           {reserverWidth ? (
             <Reserver
-              ref={reserverRef}
               columnTitleHeight={columnTitleHeight}
               dimension={cellDimension}
               rowTitleWidth={rowTitleWidth}
@@ -189,7 +229,7 @@ export default function HotelReservation() {
               columnTitles={generateColumnTitles({
                 date: startDate.toISOString(),
                 columnCount: daysTotal,
-                titleRange
+                selectedColumns: selectedColumns
               })}
               content={(columnCount, rowCount) => {
                 const content = {};
@@ -200,9 +240,9 @@ export default function HotelReservation() {
                     Array(columnCount)
                       .fill(null)
                       .forEach((_, c) => {
-                        const isDropPlace = isDragging && titleRange[c] && hoverRow === r;
+                        const isDropPlace = isDragging && selectedColumns[c] && hoverRow === r;
 
-                        const dropColumnsIndexes = Object.entries(titleRange)
+                        const dropColumnsIndexes = Object.entries(selectedColumns)
                           .filter(([, value]) => !!value)
                           .sort(([a], [b]) => +a - +b)
                           .map(([v]) => +v);
@@ -226,120 +266,79 @@ export default function HotelReservation() {
 
                 return content;
               }}
+              onPointerLeave={(e) =>
+                draggingElement &&
+                draggingElement.selectedCell !== undefined &&
+                handleDropBarOnCell(
+                  {
+                    cell: {
+                      column: draggingElement.column + draggingElement.selectedCell,
+                      row: draggingElement?.row
+                    },
+                    dimension: cellDimension
+                  },
+                  e
+                )
+              }
               BodyCellProps={{
                 onPointerDown: (props, e) => {
+                  if (isDragging) {
+                    handleDropBarOnCell(props, e);
+                    return;
+                  }
                   (e.target as Element).releasePointerCapture(e.pointerId);
                   const newbar = createBar(props.dimension, props.cell, {
                     new: true
                   });
 
-                  const selectionRange = {};
-
-                  [...Array(newbar.length)].forEach((na, i) => {
-                    selectionRange[i + newbar.column] = true;
-                  });
-
-                  setTitleRange(selectionRange);
-
-                  setHoverRow(newbar.row);
                   setNewReservation(newbar);
                   addBar(newbar);
                   setDraggingElement(newbar);
                   setIsEditing(true);
                 },
+                isResizing: isEditing,
                 onPointerEnter: (props, e) => {
                   (e.target as Element).releasePointerCapture(e.pointerId);
-                  if (isDragging && !isEditing && draggingElement) {
-                    const selectionRange = {};
-                    [...Array(draggingElement?.length)].forEach((na, i) => {
-                      if (draggingElement.selectedCell !== undefined) {
-                        selectionRange[i + props.cell.column - draggingElement.selectedCell] = true;
-                      }
-                    });
-                    const cellBar =
-                      bars.find(
-                        (b) =>
-                          b.column <= props.cell.column &&
-                          b.column + b.length >= props.cell.column &&
-                          b.row === props.cell.row
-                      ) || null;
 
-                    if (
-                      bars.some(
-                        (b) =>
-                          b.row === props.cell.row &&
-                          Object.keys(selectionRange).some((k) => +k === b.column) &&
-                          b.id !== cellBar?.id
-                      )
-                    ) {
-                      return;
-                    }
-                    setHoverRow(props.cell.row);
-                    setTitleRange(selectionRange);
+                  if (isDragging && !isEditing && draggingElement) {
+                    const newColumnValue = props.cell.column - (draggingElement.selectedCell || 0);
+
+                    const collision = hasCollisions(
+                      {
+                        ...draggingElement,
+                        row: props.cell.row || draggingElement.row,
+                        column: newColumnValue
+                      },
+                      bars.filter((b) => b.id !== draggingElement.id)
+                    );
+                    setDraggingElement((prev) => {
+                      if (!prev) {
+                        return null;
+                      }
+                      return {
+                        ...prev,
+                        column: newColumnValue,
+                        row: collision ? prev?.row : props.cell.row
+                      };
+                    });
+                    setIsColliding(collision);
                   }
 
                   if (isEditing && draggingElement) {
                     const evaluatedBar = evaluatePosition(draggingElement, props.cell);
 
-                    const selectionRange = {};
-
-                    [...Array(evaluatedBar.length)].forEach((na, i) => {
-                      selectionRange[i + evaluatedBar.column] = true;
-                    });
-                    setHoverRow(evaluatedBar.row);
-                    setTitleRange(selectionRange);
                     setDraggingElement(evaluatedBar);
                     editBar(evaluatedBar);
                   }
                 },
-                onPointerUp: ({ cell }) => {
-                  if (isDragging && !isEditing && draggingElement && draggingElement.selectedCell) {
-                    const bar = {
-                      ...draggingElement,
-                      row: cell.row,
-                      column: (cell?.column || 0) - draggingElement.selectedCell,
-                      moving: false
-                    };
-
-                    editBar(bar);
-
-                    setStyle(`.reserver-drag{transform: translate(0px,0px)}`);
-                    setTitleRange({});
-                    setHoverRow(-1);
-                    setIsDragging(false);
-                  }
-
-                  if (isEditing) {
-                    const bar = bars.find((bar) => {
-                      return bar.editing;
-                    });
-                    if (!isObjectEmpty(newReservation)) {
-                      setNewReservation(bar || null);
-                      // toggleAddReservation()
-                    }
-
-                    editBar({ ...bar, editing: false });
-                    setHoverRow(-1);
-                    setTitleRange({});
-                    setIsEditing(false);
-                  }
-                }
+                onPointerUp: handleDropBarOnCell
               }}
-              // onPointerLeave={(e) => {
-              //   if (e.buttons === 1) {
-              //     setIsDragging(false);
-              //     setDraggingElement((draggingElement) => {
-              //       editBar({ ...draggingElement, moving: false });
-              //       return null;
-              //     });
-              //   }
-              // }}
               onPointerMove={(e) => {
                 if (isDragging && !isEditing && draggingElement) {
                   setStyle(
                     `.reserver-drag{transform: translate(${
                       e.pageX - (draggingElement.draggingLeft || 0)
-                    }px,${e.pageY - (draggingElement.draggingTop || 0)}px)}`
+                    }px,${e.pageY - (draggingElement.draggingTop || 0)}px); scale: 103%; }`
                   );
                 }
               }}
@@ -357,8 +356,13 @@ export default function HotelReservation() {
                           style={{
                             ...(bar as unknown as { style: React.CSSProperties }).style,
                             borderRadius: bar.dimension.height / 2,
-                            pointerEvents: bar.editing || bar.moving ? 'none' : 'auto',
-                            zIndex: 1000,
+
+                            pointerEvents:
+                              bar.editing || bar.moving || isColliding || isDragging || isEditing
+                                ? 'none'
+                                : 'auto',
+                            zIndex: isDragging && draggingElement?.id === bar.id ? 1001 : 1000,
+                            transition: '.15s ease-in-out scale',
                             cursor:
                               isDragging && draggingElement?.id !== bar.id ? 'not-allowed' : 'grab',
                             ...getPosition(
@@ -469,7 +473,7 @@ export default function HotelReservation() {
                                   marginRight: '3px',
                                   height: '20px',
                                   width: '20px',
-                                  cursor: 'e-resize'
+                                  cursor: isDragging ? '' : 'e-resize'
                                 }}
                                 onPointerDown={(e) => {
                                   e.stopPropagation();
@@ -502,7 +506,7 @@ export default function HotelReservation() {
                                   marginLeft: '3px',
                                   height: '20px',
                                   width: '20px',
-                                  cursor: 'e-resize'
+                                  cursor: isDragging ? '' : 'e-resize'
                                 }}
                                 onPointerDown={(e) => {
                                   e.stopPropagation();
