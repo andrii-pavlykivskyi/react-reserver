@@ -35,17 +35,11 @@ const Reserver = React.forwardRef<HTMLDivElement, ReserverProps>(
         border-bottom-right-radius: ${dimension.height}px;
         border-top-right-radius: ${dimension.height}px;
       }
-      `);
-    }, [dimension, setStyle]);
-
-    // Styles have to be passed through props
-    useEffect(() => {
-      setStyle(`
       .reserver-cell:hover > div {
         background: #e4e8e9 !important;
-      }   
+      }  
       `);
-    }, [setStyle]);
+    }, [dimension, setStyle]);
 
     const columnCount = (columnTitles || []).length;
     const rowCount = (rowTitles || []).length;
