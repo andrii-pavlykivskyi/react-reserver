@@ -182,7 +182,6 @@ export default function HotelReservation() {
 
       setStyle(`.reserver-drag{transform: translate(0px,0px)}`);
       setIsDragging(false);
-      setDraggingElement(null);
       setIsColliding(false);
     }
 
@@ -199,6 +198,7 @@ export default function HotelReservation() {
       }
       setIsEditing(false);
     }
+    setDraggingElement(null);
   };
 
   return (
@@ -285,7 +285,7 @@ export default function HotelReservation() {
               }
               BodyCellProps={{
                 onPointerDown: (props, e) => {
-                  if (isDragging) {
+                  if (isDragging || isEditing) {
                     handleDropBarOnCell(props, e);
                     return;
                   }

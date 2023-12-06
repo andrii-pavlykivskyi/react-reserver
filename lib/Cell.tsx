@@ -1,3 +1,4 @@
+import clsx from 'clsx';
 import { CellCoordinates, Dimension } from './types';
 
 type EventParam = {
@@ -75,7 +76,7 @@ function Cell({
             e
           );
       }}
-      className={className}
+      className={clsx(className, 'reserver-cell')}
       onMouseOver={(e) => {
         onMouseOver &&
           onMouseOver(
