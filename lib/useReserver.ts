@@ -1,38 +1,61 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useReducer, useCallback } from 'react';
-import actionTypes from './actionTypes';
-import { ReserverReducer, StateBar } from './reserverReducer';
+import { useCallback, Dispatch, SetStateAction } from 'react';
+import actionTypes, { ActionType } from './actionTypes';
+import { reserverReducer } from './reserverReducer';
+import { Reservation, StateBar } from './types';
+import { useState } from 'react';
+import { resolveDateDiff } from './Reserver/helpers';
 
-function useReserver(reducer: ReserverReducer, initialState: any) {
-  const [{ bars, isEditing }, dispatch] = useReducer(reducer, {
-    bars: initialState,
-    isEditing: false
-  });
+type UseReserverOptions = {
+  initialReservations: Reservation[];
+  onChange: Dispatch<SetStateAction<Reservation[]>>;
+  startDate: string | moment.Moment;
+};
 
-  const addBar = useCallback((props: StateBar) => {
-    return dispatch({ payload: props, type: actionTypes.add });
-  }, []);
+function useReserver({ initialReservations, onChange, startDate }: UseReserverOptions) {
+  const [barsState, setBarsState] = useState<StateBar[]>(
+    initialReservations.map((reservation) => {
+      return {
+        ...reservation,
+        stick: 'left',
+        editing: false,
+        moving: false,
+        column: resolveDateDiff(startDate, reservation.start),
+        length: resolveDateDiff(reservation.start, reservation.end)
+      } satisfies StateBar;
+    })
+  );
+  const action = useCallback(
+    (type: ActionType, payload: any) => {
+      let reservations: Reservation[] = [];
+      setBarsState((prev) => {
+        const newState = reserverReducer({ bars: prev }, { type, payload });
+        reservations = newState.bars.map((b) => ({
+          end: b.end,
+          id: b.id,
+          name: b.name,
+          row: b.row,
+          start: b.start
+        }));
+        return newState.bars;
+      });
+      setTimeout(() => {
+        onChange(reservations);
+      }, 0);
+    },
+    [onChange]
+  );
 
-  const editBar = useCallback((bar: StateBar) => {
-    return dispatch({ payload: bar, type: actionTypes.edit });
-  }, []);
+  const addBar = useCallback((bar: StateBar) => action(actionTypes.add, bar), [action]);
 
-  const deleteBar = useCallback((props: StateBar) => {
-    return dispatch({ payload: props, type: actionTypes.delete });
-  }, []);
+  const editBar = useCallback((bar: StateBar) => action(actionTypes.edit, bar), [action]);
 
-  const setBars = useCallback((props: any) => {
-    return dispatch({ payload: props, type: actionTypes.setBars });
-  }, []);
+  const deleteBar = useCallback((bar: StateBar) => action(actionTypes.delete, bar), [action]);
 
-  const setIsEditing = useCallback((props: any) => {
-    return dispatch({ payload: props, type: actionTypes.setIsEditing });
-  }, []);
+  const setBars = useCallback((bars: StateBar[]) => action(actionTypes.setBars, bars), [action]);
 
   return {
-    isEditing,
-    setIsEditing,
-    bars,
+    bars: barsState,
     addBar,
     editBar,
     deleteBar,

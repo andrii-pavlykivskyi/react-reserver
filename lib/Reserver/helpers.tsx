@@ -1,17 +1,17 @@
-import { ReservationItem, SelectedColumns } from "./types";
+import { ReservationItem } from './types';
 
 import moment, { Moment } from 'moment';
 
 type Unit = moment.unitOfTime.DurationConstructor;
 
-export function dateRange(start: string, length: number, unit: Unit, format = 'D') {
-  return [...Array(length)].map((nu, i) => {
-    return resolveDate(start, i, unit, format);
+export function dateRange(start: string, length: number, unit: Unit): Date[] {
+  return [...Array(length)].map((_, i) => {
+    return resolveDate(start, i, unit);
   });
 }
 
-export function resolveDate(start: string, count: number, unit: Unit, format: string) {
-  return moment(start).add(count, unit).format(format);
+export function resolveDate(start: string, count: number, unit: Unit) {
+  return moment(start).add(count, unit).toDate();
 }
 
 export function resolveDateDiff(
@@ -25,39 +25,16 @@ export function resolveDateDiff(
   return b.diff(a, 'days');
 }
 
-export function generateColumnTitles(props: {
-  date: string;
-  columnCount: number;
-  selectedColumns: SelectedColumns;
-}) {
-  return dateRange(props.date, props.columnCount, 'days').map((val, index) => {
-    return (
-      <div
-        key={val}
-        style={{
-          background: props.selectedColumns[index] ? '#1ca3f9' : '#fff',
-          height: '100%',
-          width: '100%',
-          textAlign: 'center',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          fontWeight: 500
-        }}
-      >
-        <div>{val}</div>
-      </div>
-    );
-  });
-}
-
-export function generateRowTitles(reservationItems: ReservationItem[], dropRowIndex: number | null) {
+export function generateRowTitles(
+  reservationItems: ReservationItem[],
+  dropRowIndex: number | null
+) {
   return reservationItems.map((room, index) => {
     return (
-      <div>
+      <div style={{ height: '100%' }}>
         <div
           style={{
+            height: '100%',
             padding: '3px',
             display: 'flex',
             alignContent: 'center',
@@ -70,18 +47,4 @@ export function generateRowTitles(reservationItems: ReservationItem[], dropRowIn
       </div>
     );
   });
-}
-
-export function calculateLinePoint(
-  column: number,
-  columnWidth: number,
-  columnTitleHeight: number,
-  row: number,
-  rowHeight: number,
-  rowTitleWidth: number
-) {
-  return {
-    x: column * columnWidth + rowTitleWidth,
-    y: (row + 0.5) * rowHeight + columnTitleHeight
-  };
 }

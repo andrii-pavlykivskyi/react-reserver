@@ -1,157 +1,204 @@
-import React, { useEffect } from 'react';
-import Head from '../Head';
+import { FC, useEffect, useMemo } from 'react';
+import Head from '../Head/Head';
 import Cell from '../Cell';
-import { Grid, GetGridContent } from './types';
+import { GridProps, GetGridContent } from './types';
 import useStyle from '../hooks/useStyle';
+import { ROOT_CLASS_NAME } from '../constants';
+import BodyCell from '../BodyCell';
 
-const Grid = React.forwardRef<HTMLDivElement, Grid>(
-  (
-    {
-      dimension = { height: 20, width: 20 },
-      columnTitles,
-      rowTitles,
-      content: getContent = (() => ({})) as GetGridContent,
-      rowTitleWidth = 0,
-      columnTitleHeight = 0,
-      dir = 'ltr',
-      isDragging = false,
+const Grid: FC<GridProps> = ({
+  dimension,
+  rowTitles,
+  content: getContent = (() => ({})) as GetGridContent,
+  rowTitleWidth = 0,
+  dir = 'ltr',
+  isDragging = false,
 
-      children,
-      HeadProps,
-      BodyCellProps,
-      ...props
-    },
-    ref
-  ) => {
-    const setStyle = useStyle(`
-    .reserver-cell:hover > div {
+  children,
+  HeadProps,
+  BodyCellProps,
+  slotComponents,
+  ...props
+}) => {
+  const setStyle = useStyle(`
+    .${ROOT_CLASS_NAME} .reserver-cell:hover > div {
       background: #e4e8e9 !important;
     }  
-    .peg-drop-place {
+    .${ROOT_CLASS_NAME} .peg-drop-place {
       position: relative;
     }
-    .peg-drop-place::after {
+    .${ROOT_CLASS_NAME} .peg-drop-place::after {
       content: '';
       inset: 0px;
       background-color: #0e6ba830;
       z-index: 20000;
       position: absolute;
     }
+    .${ROOT_CLASS_NAME} {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      touch-action: none;
+      user-select: none;
+    }
+    .${ROOT_CLASS_NAME} > div {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 500px;
+    }
     `);
 
-    useEffect(() => {
-      setStyle(`
-      .peg-drop-place-first::after {
+  useEffect(() => {
+    setStyle(`
+      .${ROOT_CLASS_NAME} .peg-drop-place-first::after {
         border-bottom-left-radius: ${dimension.height}px;
         border-top-left-radius: ${dimension.height}px;
       }
-      .peg-drop-place-last::after {
+      .${ROOT_CLASS_NAME} .peg-drop-place-last::after {
         border-bottom-right-radius: ${dimension.height}px;
         border-top-right-radius: ${dimension.height}px;
       }
+      .${ROOT_CLASS_NAME} .bar > div {
+        width: ${dimension.width}px;
+        height: ${dimension.width}px;
+      }
       `);
-    }, [dimension, setStyle]);
+  }, [dimension, setStyle]);
 
-    const columnCount = (columnTitles || []).length;
-    const rowCount = (rowTitles || []).length;
+  const columnDates = HeadProps.columnDates;
+  const columnCount = (columnDates || []).length;
+  const rowCount = (rowTitles || []).length;
 
-    const content = getContent(columnCount, rowCount);
+  const content = getContent(columnCount, rowCount);
 
-    const minWidth = rowTitleWidth + columnCount * dimension.width;
+  const minWidth = rowTitleWidth + columnCount * dimension.width;
 
-    return (
-      <div
-        ref={ref}
-        id={props.id}
-        className={props.className}
-        role="grid"
-        {...props}
-        style={{ ...props.style, position: 'relative', minWidth }}
-      >
-        <Head
-          columnTitles={columnTitles}
-          isVisible={columnTitles.length > 0}
-          {...HeadProps}
-          columnCount={columnCount}
-          height={columnTitleHeight}
-          rowTitleWidth={rowTitleWidth}
-          dimension={dimension}
-          columnTitleClassName={props.columnTitleClassName}
-          cantonClassName={props.cantonClassName}
-          dir={dir}
-        />
-        {[...Array(rowCount)].map((_, r) => {
-          return (
-            <div role="rowgroup" key={r} style={{ height: dimension.height, display: 'flex' }}>
-              {dir === 'ltr' && (
-                <Cell
-                  column={-1}
+  const childrenContent = useMemo(
+    () =>
+      typeof children === 'function'
+        ? children({
+            rowCount: rowCount,
+            columnCount: columnCount,
+            rowTitleWidth: rowTitleWidth,
+            dimension: dimension
+          })
+        : null,
+    [children, columnCount, dimension, rowCount, rowTitleWidth]
+  );
+
+  const head = useMemo(
+    () => (
+      <Head
+        isVisible={columnCount > 0}
+        {...HeadProps}
+        columnCount={columnCount}
+        rowTitleWidth={rowTitleWidth}
+        dimension={dimension}
+        columnTitleClassName={props.columnTitleClassName}
+        cantonClassName={props.cantonClassName}
+        slotComponents={slotComponents}
+        dir={dir}
+      />
+    ),
+    [
+      HeadProps,
+      columnCount,
+      dimension,
+      dir,
+      props.cantonClassName,
+      props.columnTitleClassName,
+      rowTitleWidth,
+      slotComponents
+    ]
+  );
+  const grid = useMemo(
+    () =>
+      [...Array(rowCount)].map((_, r) => {
+        return (
+          <div role="rowgroup" key={r} style={{ height: dimension.height, display: 'flex' }}>
+            {dir === 'ltr' && (
+              <Cell
+                column={-1}
+                row={r}
+                style={{ display: rowTitles.length > 0 ? 'initial' : 'none' }}
+                dimension={{
+                  height: dimension.height,
+                  width: rowTitleWidth
+                }}
+                isHeading
+                className={props.rowTitleClassName}
+              >
+                {rowTitles[r]}
+              </Cell>
+            )}
+            {[...Array(columnCount)].map((_, c) => {
+              return (
+                <BodyCell
+                  {...BodyCellProps}
+                  key={`r${r}c${c}`}
+                  dimension={dimension}
+                  className={props.cellClassName}
+                  column={c}
                   row={r}
-                  style={{ display: rowTitles.length > 0 ? 'initial' : 'none' }}
-                  dimension={{
-                    height: dimension.height,
-                    width: rowTitleWidth
-                  }}
-                  isHeading
-                  className={props.rowTitleClassName}
+                  date={columnDates[c]}
+                  isDragging={isDragging}
+                  isHeading={false}
                 >
-                  {rowTitles[r]}
-                </Cell>
-              )}
-              {[...Array(columnCount)].map((_, c) => {
-                return (
-                  <Cell
-                    {...BodyCellProps}
-                    key={`r${r}c${c}`}
-                    dimension={dimension}
-                    className={props.cellClassName}
-                    column={c}
-                    row={r}
-                    isDragging={isDragging}
-                    isHeading={false}
-                  >
-                    {content[`r${r}c${c}`]}
-                  </Cell>
-                );
-              })}
-              {dir === 'rtl' && (
-                <Cell
-                  column={-1}
-                  row={r}
-                  isHeading
-                  style={{ display: rowTitles.length > 0 ? 'initial' : 'none' }}
-                  dimension={{
-                    height: dimension.height,
-                    width: rowTitleWidth
-                  }}
-                  className={props.rowTitleClassName}
-                >
-                  {rowTitles[r]}
-                </Cell>
-              )}
-            </div>
-          );
-        })}
-
-        <div role="list" style={{ height: '100%', overflow: 'hidden' }}>
-          {typeof children === 'function' &&
-            children({
-              rowCount: rowCount,
-              columnCount: columnCount,
-              rowTitleWidth: rowTitleWidth,
-              dimension: dimension,
-              columnTitleHeight:
-                columnTitles.length > 0
-                  ? columnTitleHeight > 0
-                    ? columnTitleHeight
-                    : dimension.height
-                  : 0
+                  {content[`r${r}c${c}`]}
+                </BodyCell>
+              );
             })}
-          {Array.isArray(children) && children}
-        </div>
+            {dir === 'rtl' && (
+              <Cell
+                column={-1}
+                row={r}
+                isHeading
+                style={{ display: rowTitles.length > 0 ? 'initial' : 'none' }}
+                dimension={{
+                  height: dimension.height,
+                  width: rowTitleWidth
+                }}
+                className={props.rowTitleClassName}
+              >
+                {rowTitles[r]}
+              </Cell>
+            )}
+          </div>
+        );
+      }),
+    [
+      BodyCellProps,
+      columnCount,
+      columnDates,
+      content,
+      dimension,
+      dir,
+      isDragging,
+      props.cellClassName,
+      props.rowTitleClassName,
+      rowCount,
+      rowTitleWidth,
+      rowTitles
+    ]
+  );
+
+  return (
+    <div
+      id={props.id}
+      className={props.className}
+      role="grid"
+      {...props}
+      style={{ ...props.style, position: 'relative', minWidth }}
+    >
+      {head}
+      {grid}
+      <div role="list" style={{ height: '100%', overflow: 'hidden' }}>
+        {childrenContent}
+        {Array.isArray(children) && children}
       </div>
-    );
-  }
-);
+    </div>
+  );
+};
 
 export default Grid;

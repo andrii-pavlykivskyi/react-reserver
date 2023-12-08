@@ -1,41 +1,31 @@
-import { ReactNode } from 'react';
-
-import Cell from './Cell';
-import { Dimension } from './types';
-export type HeadProps = {
-  isVisible: boolean;
-  dimension: Dimension;
-  rowTitleWidth: number;
-  columnTitles: ReactNode[];
-  columnCount: number;
-  height: number;
-  dir?: string;
-  canton?: ReactNode;
-  rowTitleClassName?: string;
-  columnTitleClassName?: string;
-  cantonClassName?: string;
-  onMouseOverCell?: () => void;
-};
+import Cell from '../Cell';
+import DefaultHeaderCell from './DefaultHeaderCell';
+import { HeadProps } from './types';
 
 export default function Head({
   dir = 'ltr',
   canton = null,
   onMouseOverCell = () => {},
+  height,
+  slotComponents,
   ...props
 }: HeadProps) {
+  const HeaderCell =
+    slotComponents && slotComponents.HeaderCell ? slotComponents.HeaderCell : DefaultHeaderCell;
+
   return (
     <div
       role="columnheader"
       className={props.rowTitleClassName}
       style={{
         display: props.isVisible ? 'flex' : 'none',
-        height: props.dimension.height
+        height: height
       }}
     >
       {dir === 'ltr' && (
         <Cell
           dimension={{
-            height: props.dimension.height,
+            height: height,
             width: props.rowTitleWidth
           }}
           row={-1}
@@ -46,30 +36,33 @@ export default function Head({
           {canton}
         </Cell>
       )}
-      {props.columnTitles.map((headitem, i) => {
+      {props.columnDates.map((date, i) => {
         return (
           <Cell
             aria-colindex={i}
             key={i}
             onMouseOver={onMouseOverCell}
-            dimension={props.dimension}
+            dimension={{
+              height,
+              width: props.dimension.width
+            }}
             column={i}
             row={-1}
             className={props.columnTitleClassName}
             isHeading
           >
-            {headitem}
+            <HeaderCell date={date} />
           </Cell>
         );
       })}
       {dir === 'rtl' && (
         <Cell
           dimension={{
-            height: props.dimension.height,
+            height: height,
             width: props.rowTitleWidth
           }}
           row={-1}
-          column={props.columnTitles.length}
+          column={props.columnDates.length}
           className={props.cantonClassName}
           isHeading
         >

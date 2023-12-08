@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
 import { Dimension } from '../types';
-import { CellProps } from '../Cell';
-import { HeadProps } from '../Head';
+import { HeadProps } from '../Head/types';
+import { ReserverSlotComponents } from '../Reserver/types';
+import { BodyCellProps } from '../BodyCell/types';
 
 export type GridContent = Record<`r${number}c${number}`, ReactNode>;
 
@@ -14,15 +15,12 @@ export type ChildrenProps = {
   columnCount: number;
   rowTitleWidth: number;
   dimension: Dimension;
-  columnTitleHeight: number;
 };
 
-export type Grid = Omit<React.ComponentProps<'div'>, 'content' | 'children'> & {
+export type GridProps = Omit<React.ComponentProps<'div'>, 'content' | 'children'> & {
   dimension: Dimension;
   rowTitleWidth: number;
   rowTitles: Titles;
-  columnTitles: Titles;
-  columnTitleHeight: number;
 
   columnTitleClassName?: string;
   cantonClassName?: string;
@@ -33,6 +31,7 @@ export type Grid = Omit<React.ComponentProps<'div'>, 'content' | 'children'> & {
 
   children: (props: ChildrenProps) => ReactNode;
 
-  HeadProps?: Partial<HeadProps>;
-  BodyCellProps?: Partial<CellProps>;
+  HeadProps: Partial<HeadProps> & Pick<HeadProps, 'columnDates' | 'height'>;
+  BodyCellProps?: Partial<BodyCellProps>;
+  slotComponents?: ReserverSlotComponents;
 };

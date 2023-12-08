@@ -18,7 +18,12 @@ export type Reservation = {
   end: string;
   name: string;
   row: number;
-  column?: number;
-  length?: number;
-  dimension?: Dimension;
+};
+
+export type StateBar = Reservation & {
+  column: number;
+  length: number;
+  editing: boolean;
+  moving: boolean;
+  stick: BarStick;
 };
